@@ -1,28 +1,28 @@
 <?php
-// Connect to DB
 $conn = new mysqli("localhost", "root", "", "realtime_tracker");
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+
+// Step 1: Get trip_id safely
+$tripRes = $conn->query("SELECT trip_id FROM trip ORDER BY trip_id DESC LIMIT 1");
+
+if ($tripRes && $tripRes->num_rows > 0) {
+    $tripRow = $tripRes->fetch_assoc();
+    $trip_id = $tripRow['trip_id'];
+} else {
+    echo "No trip found!";
+    exit();
 }
 
-// Simulate moving location
-$vehicle_id = 1;
+// Step 2: Generate random location
+$lat = 12.9716 + (rand(-100, 100) / 10000);
+$lng = 77.5946 + (rand(-100, 100) / 10000);
 
-// Get current location
-$query = "SELECT latitude, longitude FROM vehicle_location WHERE vehicle_id = $vehicle_id";
-$result = $conn->query($query);
-$row = $result->fetch_assoc();
+// Step 3: Insert into location table
+$sql = "INSERT INTO location (trip_id, latitude, longitude, timestamp)
+        VALUES ($trip_id, $lat, $lng, NOW())";
 
-$lat = $row['latitude'];
-$lng = $row['longitude'];
-
-// Simulate new position
-$lat += 0.0005;
-$lng += 0.0005;
-
-// Update DB
-$update = "UPDATE vehicle_location SET latitude = $lat, longitude = $lng WHERE vehicle_id = $vehicle_id";
-$conn->query($update);
-
-echo json_encode(["status" => "updated", "lat" => $lat, "lng" => $lng]);
+if ($conn->query($sql)) {
+    echo "Location updated!";
+} else {
+    echo "Error: " . $conn->error;
+}
 ?>

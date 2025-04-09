@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Trip Schedule</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+    }
+    .timeline {
+      width: 80%;
+      margin: auto;
+      border-left: 4px solid #007BFF;
+      padding-left: 20px;
+    }
+    .trip {
+      background: white;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 6px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      position: relative;
+    }
+    .trip::before {
+      content: "";
+      width: 12px;
+      height: 12px;
+      background: #007BFF;
+      position: absolute;
+      left: -30px;
+      top: 20px;
+      border-radius: 50%;
+    }
+    .trip h3 {
+      margin: 0 0 10px;
+    }
+    .trip span {
+      display: block;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <h2>🗓️ Trip Schedule</h2>
+  <div class="timeline" id="timeline"></div>
+
+  <script>
+    fetch('/RealTimeTrackerProject/backend/api/getTrips.php')
+      .then(res => res.json())
+      .then(data => {
+        const timeline = document.getElementById("timeline");
+        if (!data.length) {
+          timeline.innerHTML = '<p>No trips found.</p>';
+        } else {
+          timeline.innerHTML = data.map(trip => `
+            <div class="trip">
+              <h3>${trip.route_name} (${trip.vehicle_number})</h3>
+              <span>Type: ${trip.type}</span>
+              <span>Start: ${trip.start_time}</span>
+              <span>End: ${trip.end_time}</span>
+            </div>
+          `).join('');
+        }
+      })
+      .catch(err => console.error("Error loading trips:", err));
+  </script>
+</body>
+</html>

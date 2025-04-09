@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login | Real-Time Tracker</title>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <style>
+    :root {
+      --primary: #2196f3;
+      --primary-dark: #1976d2;
+      --primary-light: #bbdefb;
+      --secondary: #1e88e5;
+      --text-light: #f5f5f5;
+      --text-dark: #333;
+      --bg-light: #f4f9ff;
+      --shadow: 0 8px 20px rgba(0,0,0,0.12);
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-container {
+      background: white;
+      padding: 2.5rem;
+      border-radius: 16px;
+      width: 380px;
+      box-shadow: var(--shadow);
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .icon-container {
+      background-color: var(--primary-light);
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1rem;
+    }
+
+    .icon-container i {
+      font-size: 2rem;
+      color: var(--primary-dark);
+    }
+
+    h2 {
+      color: var(--primary-dark);
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .subtitle {
+      color: #777;
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+
+    .form-group i {
+      position: absolute;
+      left: 12px;
+      top: 14px;
+      color: #777;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 12px 12px 12px 40px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+      outline: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: var(--primary);
+      color: white;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 500;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    button:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button i {
+      margin-right: 8px;
+    }
+
+    .error-msg {
+      color: #e53935;
+      text-align: center;
+      margin-bottom: 1rem;
+      padding: 8px;
+      background-color: #ffebee;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 1.5rem;
+      color: var(--primary-dark);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <div class="header">
+      <div class="icon-container">
+        <i class="fas fa-lock"></i>
+      </div>
+      <h2>Admin Login</h2>
+      <p class="subtitle">Enter your credentials to access admin panel</p>
+    </div>
+
+    <!-- Optional error message -->
+    <!-- <div class="error-msg">
+      <i class="fas fa-exclamation-circle"></i> Invalid credentials. Please try again.
+    </div> -->
+
+    <form action="/RealTimeTrackerProject/backend/api/login.php" method="POST">
+      <div class="form-group">
+        <i class="fas fa-user"></i>
+        <input type="text" name="admin_id" placeholder="Admin ID" required />
+      </div>
+      
+      <div class="form-group">
+        <i class="fas fa-key"></i>
+        <input type="password" name="password" placeholder="Password" required />
+      </div>
+      
+      <button type="submit">
+        <i class="fas fa-sign-in-alt"></i> Login
+      </button>
+    </form>
+    
+    <a href="index.html" class="back-link">
+      <i class="fas fa-arrow-left"></i> Back to Home
+    </a>
+  </div>
+
+</body>
+</html>

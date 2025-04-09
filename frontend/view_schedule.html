@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>View Schedule | Real-Time Tracker</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f5f7fa;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: #1e88e5;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-size: 1.8rem;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    table {
+      width: 95%;
+      margin: 30px auto;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      padding: 15px;
+      text-align: center;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    th {
+      background-color: #007BFF;
+      color: white;
+      font-weight: bold;
+    }
+
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+
+    @media (max-width: 768px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+      th {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+      }
+      tr {
+        margin: 0 0 1rem 0;
+        border: 1px solid #ccc;
+        padding: 10px;
+        border-radius: 8px;
+      }
+      td {
+        border: none;
+        position: relative;
+        padding-left: 50%;
+        text-align: left;
+      }
+      td::before {
+        position: absolute;
+        top: 12px;
+        left: 10px;
+        width: 45%;
+        font-weight: bold;
+        color: #333;
+      }
+      td:nth-of-type(1)::before { content: "Trip ID"; }
+      td:nth-of-type(2)::before { content: "Vehicle"; }
+      td:nth-of-type(3)::before { content: "Type"; }
+      td:nth-of-type(4)::before { content: "Route"; }
+      td:nth-of-type(5)::before { content: "Start Time"; }
+      td:nth-of-type(6)::before { content: "End Time"; }
+      td:nth-of-type(7)::before { content: "Current Location"; }
+      td:nth-of-type(8)::before { content: "Status"; }
+    }
+  </style>
+</head>
+<body>
+  <header>📋 View Scheduled Bus/Train Trips</header>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Trip ID</th>
+        <th>Vehicle</th>
+        <th>Type</th>
+        <th>Route</th>
+        <th>Start Time</th>
+        <th>End Time</th>
+        <th>Current Location</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="tripBody"></tbody>
+  </table>
+
+  <script>
+    fetch('/RealTimeTrackerProject/backend/api/getAllTripsWithLocation.php')
+      .then(res => res.json())
+      .then(data => {
+        const tbody = document.getElementById("tripBody");
+        if (!data.length) {
+          tbody.innerHTML = '<tr><td colspan="8">No trips scheduled.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.map(trip => `
+          <tr>
+            <td>${trip.trip_id}</td>
+            <td>${trip.vehicle_number}</td>
+            <td>${trip.type}</td>
+            <td>${trip.route_name}</td>
+            <td>${trip.start_time}</td>
+            <td>${trip.end_time}</td>
+            <td>${trip.latitude && trip.longitude ? `${trip.latitude}, ${trip.longitude}` : 'N/A'}</td>
+            <td>${trip.status}</td>
+          </tr>
+        `).join('');
+      })
+      .catch(err => {
+        console.error("Failed to load trips:", err);
+      });
+  </script>
+</body>
+</html>

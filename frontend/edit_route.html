@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Edit Route</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+    }
+    #map {
+      height: 500px;
+      margin-bottom: 20px;
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+    }
+    button {
+      padding: 10px 15px;
+      background: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h2>✏️ Edit Route for Trip</h2>
+
+  <div id="map"></div>
+
+  <form action="../backend/api/update_route.php" method="POST">
+    <input type="hidden" name="trip_id" value="1"> <!-- Make dynamic if needed -->
+    <label>Route Points (lat,lng per line):</label>
+    <textarea name="route_points" id="routeBox"></textarea>
+    <br><br>
+    <button type="submit">Save Updated Route</button>
+  </form>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([12.961, 77.641], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    let polyline;
+    const markers = [];
+    const tripId = 1; // Make dynamic if needed
+
+    fetch(`/RealTimeTrackerProject/backend/api/getRoute.php?trip_id=${tripId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (!data.length) return;
+        const latlngs = data.map(p => [p.latitude, p.longitude]);
+        polyline = L.polyline(latlngs, { color: 'blue' }).addTo(map);
+        latlngs.forEach((coord, idx) => {
+          const m = L.marker(coord, { draggable: true }).addTo(map);
+          m.on('dragend', updateCoordsBox);
+          markers.push(m);
+        });
+        updateCoordsBox();
+        map.fitBounds(polyline.getBounds());
+      });
+
+    function updateCoordsBox() {
+      const coords = markers.map(m => {
+        const { lat, lng } = m.getLatLng();
+        return `${lat.toFixed(6)},${lng.toFixed(6)}`;
+      }).join('\n');
+      document.getElementById('routeBox').value = coords;
+    }
+  </script>
+</body>
+</html>

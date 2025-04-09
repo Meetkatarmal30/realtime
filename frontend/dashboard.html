@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Dashboard - Feedback</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    #feedback {
+      margin-top: 20px;
+    }
+    .feedback-entry {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🧾 Feedback Received</h1>
+  <div id="feedback">Loading...</div>
+
+  <script>
+    fetch('/RealTimeTrackerProject/backend/api/getFeedback.php')
+      .then(res => res.json())
+      .then(data => {
+        const container = document.getElementById('feedback');
+        if (data.length === 0) {
+          container.innerHTML = "<p>No feedback submitted yet.</p>";
+          return;
+        }
+        container.innerHTML = data.map(f => `
+          <div class="feedback-entry">
+            <strong>Trip ID:</strong> ${f.trip_id}<br/>
+            <strong>Message:</strong> ${f.message}
+          </div>
+        `).join('');
+      })
+      .catch(err => {
+        document.getElementById('feedback').innerHTML = "Error loading feedback.";
+        console.error(err);
+      });
+  </script>
+
+</body>
+</html>

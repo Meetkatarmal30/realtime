@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trip Dashboard | Real-Time Tracker</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <style>
+    :root {
+      --primary: #3498db;
+      --primary-dark: #2980b9;
+      --secondary: #2ecc71;
+      --dark: #2c3e50;
+      --light: #ecf0f1;
+      --danger: #e74c3c;
+      --warning: #f39c12;
+      --success: #27ae60;
+      --gray: #95a5a6;
+      --gray-light: #f5f7fa;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Roboto, -apple-system, sans-serif;
+      background: #f5f7fa;
+      color: var(--dark);
+      min-height: 100vh;
+    }
+    
+    header {
+      background: linear-gradient(to right, #3498db, #2c3e50);
+      color: white;
+      padding: 20px 30px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    header::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 30%;
+      background: rgba(255,255,255,0.05);
+      transform: skewX(-15deg) translateX(50%);
+    }
+    
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+    
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .subtitle {
+      opacity: 0.8;
+      font-weight: 300;
+      font-size: 1rem;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .dashboard-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .search-box {
+      position: relative;
+      flex-grow: 1;
+      max-width: 400px;
+    }
+    
+    .search-box input {
+      width: 100%;
+      padding: 12px 15px 12px 40px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 16px;
+      background: white;
+      transition: all 0.3s;
+    }
+    
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    }
+    
+    .search-box i {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gray);
+    }
+    
+    .filter-dropdown {
+      position: relative;
+    }
+    
+    .filter-dropdown select {
+      appearance: none;
+      padding: 12px 40px 12px 15px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    
+    .filter-dropdown::after {
+      content: '\f0d7';
+      font-family: "Font Awesome 6 Free";
+      font-weight: 900;
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: var(--gray);
+    }
+    
+    .btn {
+      display: inline-block;
+      padding: 12px 20px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    th, td {
+      padding: 15px 20px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    
+    th {
+      background-color: var(--gray-light);
+      font-weight: 600;
+      color: var(--dark);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    
+    tr:hover {
+      background-color: rgba(52, 152, 219, 0.05);
+    }
+    
+    .status-pill {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 14px;
+      text-align: center;
+    }
+    
+    .status-active {
+      background-color: rgba(46, 204, 113, 0.15);
+      color: var(--success);
+    }
+    
+    .status-scheduled {
+      background-color: rgba(52, 152, 219, 0.15);
+      color: var(--primary);
+    }
+    
+    .status-completed {
+      background-color: rgba(149, 165, 166, 0.15);
+      color: var(--gray);
+    }
+    
+    .status-delayed {
+      background-color: rgba(243, 156, 18, 0.15);
+      color: var(--warning);
+    }
+    
+    .status-cancelled {
+      background-color: rgba(231, 76, 60, 0.15);
+      color: var(--danger);
+    }
+    
+    .vehicle-icon {
+      margin-right: 5px;
+      font-size: 14px;
+    }
+    
+    .table-actions {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .action-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      width: 35px;
+      height: 35px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+    
+    .view-btn {
+      color: var(--primary);
+      background: rgba(52, 152, 219, 0.1);
+    }
+    
+    .edit-btn {
+      color: var(--warning);
+      background: rgba(243, 156, 18, 0.1);
+    }
+    
+    .delete-btn {
+      color: var(--danger);
+      background: rgba(231, 76, 60, 0.1);
+    }
+    
+    .action-btn:hover {
+      transform: translateY(-2px);
+    }
+    
+    .view-btn:hover {
+      background: rgba(52, 152, 219, 0.2);
+    }
+    
+    .edit-btn:hover {
+      background: rgba(243, 156, 18, 0.2);
+    }
+    
+    .delete-btn:hover {
+      background: rgba(231, 76, 60, 0.2);
+    }
+    
+    .empty-state {
+      padding: 50px;
+      text-align: center;
+      color: var(--gray);
+    }
+    
+    .empty-state i {
+      font-size: 48px;
+      margin-bottom: 15px;
+      opacity: 0.5;
+    }
+    
+    .empty-state h3 {
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    
+    .location-cell {
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .pagination {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+      gap: 5px;
+    }
+    
+    .pagination button {
+      padding: 8px 15px;
+      border: 1px solid #ddd;
+      background: white;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .pagination button.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    
+    .pagination button:hover:not(.active) {
+      background: var(--gray-light);
+    }
+    
+    .data-loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+      font-size: 18px;
+      color: var(--gray);
+    }
+    
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(52, 152, 219, 0.3);
+      border-radius: 50%;
+      border-top-color: var(--primary);
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 10px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    @media (max-width: 768px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+      
+      thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+      }
+      
+      tr {
+        margin-bottom: 15px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border-radius: 8px;
+      }
+      
+      td {
+        position: relative;
+        padding-left: 50%;
+        text-align: right;
+        border-bottom: 1px solid #eee;
+      }
+      
+      td:before {
+        position: absolute;
+        left: 15px;
+        top: 15px;
+        width: 45%;
+        white-space: nowrap;
+        font-weight: 600;
+        text-align: left;
+      }
+      
+      td:nth-of-type(1):before { content: "Trip ID"; }
+      td:nth-of-type(2):before { content: "Vehicle"; }
+      td:nth-of-type(3):before { content: "Type"; }
+      td:nth-of-type(4):before { content: "Route"; }
+      td:nth-of-type(5):before { content: "Start Time"; }
+      td:nth-of-type(6):before { content: "End Time"; }
+      td:nth-of-type(7):before { content: "Current Location"; }
+      td:nth-of-type(8):before { content: "Status"; }
+      td:nth-of-type(9):before { content: "Actions"; }
+      
+      .dashboard-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .search-box {
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <h1><i class="fas fa-map-marked-alt"></i> Trip Dashboard</h1>
+      <p class="subtitle">Monitor and manage all scheduled bus and train trips</p>
+    </div>
+  </header>
+  
+  <div class="container">
+    <div class="dashboard-controls">
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" id="searchInput" placeholder="Search by vehicle number, route..." />
+      </div>
+      
+      <div class="filter-dropdown">
+        <select id="statusFilter">
+          <option value="all">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="scheduled">Scheduled</option>
+          <option value="completed">Completed</option>
+          <option value="delayed">Delayed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      
+      <div class="filter-dropdown">
+        <select id="typeFilter">
+          <option value="all">All Types</option>
+          <option value="bus">Bus Only</option>
+          <option value="train">Train Only</option>
+        </select>
+      </div>
+      
+      <a href="add_trip.html" class="btn">
+        <i class="fas fa-plus"></i> Add New Trip
+      </a>
+    </div>
+    
+    <div class="card">
+      <div id="loadingState" class="data-loading">
+        <div class="spinner"></div> Loading trip data...
+      </div>
+      
+      <table id="tripsTable" style="display: none;">
+        <thead>
+          <tr>
+            <th>Trip ID</th>
+            <th>Vehicle</th>
+            <th>Type</th>
+            <th>Route</th>
+            <th>Start Time</th>
+            <th>End Time</th>
+            <th>Current Location</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tripBody"></tbody>
+      </table>
+      
+      <div id="emptyState" class="empty-state" style="display: none;">
+        <i class="fas fa-route"></i>
+        <h3>No trips found</h3>
+        <p>There are no trips matching your current filters.</p>
+      </div>
+    </div>
+    
+    <div class="pagination" id="pagination">
+      <!-- Pagination will be generated by JS -->
+    </div>
+  </div>
+
+  <script>
+    // Show loading state
+    document.getElementById('loadingState').style.display = 'flex';
+    document.getElementById('tripsTable').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+    
+    // Get trip data
+    fetch('/RealTimeTrackerProject/backend/api/getAllTripsWithLocation.php')
+      .then(res => res.json())
+      .then(data => {
+        // Hide loading state
+        document.getElementById('loadingState').style.display = 'none';
+        
+        // Store all data for filtering
+        window.allTrips = data;
+        
+        if (!data.length) {
+          document.getElementById('emptyState').style.display = 'block';
+          return;
+        }
+        
+        // Show table and render data
+        document.getElementById('tripsTable').style.display = 'table';
+        renderTrips(data);
+      })
+      .catch(err => {
+        console.error("Failed to load trips:", err);
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'block';
+        document.querySelector('#emptyState p').textContent = 'Error loading trip data. Please try again later.';
+      });
+    
+    // Function to render trips
+    function renderTrips(trips) {
+      const tbody = document.getElementById("tripBody");
+      
+      if (!trips.length) {
+        document.getElementById('tripsTable').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'block';
+        return;
+      }
+      
+      document.getElementById('tripsTable').style.display = 'table';
+      document.getElementById('emptyState').style.display = 'none';
+      
+      tbody.innerHTML = trips.map(trip => {
+        // Determine status class
+        let statusClass = '';
+        switch(trip.status?.toLowerCase() || 'scheduled') {
+          case 'active':
+            statusClass = 'status-active';
+            break;
+          case 'scheduled':
+            statusClass = 'status-scheduled';
+            break;
+          case 'completed':
+            statusClass = 'status-completed';
+            break;
+          case 'delayed':
+            statusClass = 'status-delayed';
+            break;
+          case 'cancelled':
+            statusClass = 'status-cancelled';
+            break;
+          default:
+            statusClass = 'status-scheduled';
+        }
+        
+        // Vehicle icon
+        const vehicleIcon = trip.type === 'bus' ? 
+          '<i class="fas fa-bus vehicle-icon"></i>' : 
+          '<i class="fas fa-train vehicle-icon"></i>';
+        
+        // Format time for display
+        const formatTime = (timeStr) => {
+          if (!timeStr) return 'N/A';
+          const date = new Date(timeStr);
+          return date.toLocaleString();
+        };
+        
+        return `
+          <tr>
+            <td>${trip.trip_id}</td>
+            <td>${vehicleIcon} ${trip.vehicle_number}</td>
+            <td>${trip.type === 'bus' ? 'Bus' : 'Train'}</td>
+            <td>${trip.route_name || 'Route #' + trip.trip_id}</td>
+            <td>${formatTime(trip.start_time)}</td>
+            <td>${formatTime(trip.end_time)}</td>
+            <td class="location-cell">${trip.latitude && trip.longitude ? `${trip.latitude.toFixed(4)}, ${trip.longitude.toFixed(4)}` : 'N/A'}</td>
+            <td><span class="status-pill ${statusClass}">${trip.status || 'Scheduled'}</span></td>
+            <td>
+              <div class="table-actions">
+                <button class="action-btn view-btn" title="View Details" onclick="viewTrip(${trip.trip_id})">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="action-btn edit-btn" title="Edit Trip" onclick="editTrip(${trip.trip_id})">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="action-btn delete-btn" title="Delete Trip" onclick="deleteTrip(${trip.trip_id})">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+    
+    // Search and filter functionality
+    document.getElementById('searchInput').addEventListener('input', filterTrips);
+    document.getElementById('statusFilter').addEventListener('change', filterTrips);
+    document.getElementById('typeFilter').addEventListener('change', filterTrips);
+    
+    function filterTrips() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      const statusFilter = document.getElementById('statusFilter').value;
+      const typeFilter = document.getElementById('typeFilter').value;
+      
+      if (!window.allTrips) return;
+      
+      const filtered = window.allTrips.filter(trip => {
+        // Search term filter
+        const matchesSearch = 
+          trip.vehicle_number.toLowerCase().includes(searchTerm) ||
+          (trip.route_name && trip.route_name.toLowerCase().includes(searchTerm)) ||
+          trip.trip_id.toString().includes(searchTerm);
+        
+        // Status filter
+        const matchesStatus = statusFilter === 'all' || 
+          (trip.status && trip.status.toLowerCase() === statusFilter) ||
+          (!trip.status && statusFilter === 'scheduled');
+        
+        // Type filter
+        const matchesType = typeFilter === 'all' || 
+          trip.type === typeFilter;
+        
+        return matchesSearch && matchesStatus && matchesType;
+      });
+      
+      renderTrips(filtered);
+    }
+    
+    // Trip actions
+    function viewTrip(tripId) {
+      alert(`Viewing details for Trip #${tripId}`);
+      // You would normally redirect to a detail page
+      // window.location.href = `view_trip.html?id=${tripId}`;
+    }
+    
+    function editTrip(tripId) {
+      alert(`Editing Trip #${tripId}`);
+      // You would normally redirect to an edit page
+      // window.location.href = `edit_trip.html?id=${tripId}`;
+    }
+    
+    function deleteTrip(tripId) {
+      if (confirm(`Are you sure you want to delete Trip #${tripId}?`)) {
+        alert(`Trip #${tripId} would be deleted. This is just a placeholder.`);
+        // Here you would make an API call to delete the trip
+        // fetch(`/RealTimeTrackerProject/backend/api/delete_trip.php?id=${tripId}`, {method: 'DELETE'})
+        //   .then(res => res.json())
+        //   .then(data => {
+        //     // Remove from UI and update window.allTrips
+        //     window.allTrips = window.allTrips.filter(trip => trip.trip_id !== tripId);
+        //     filterTrips(); // Re-render with updated data
+        //   })
+        //   .catch(err => {
+        //     console.error("Failed to delete trip:", err);
+        //     alert("Failed to delete trip. Please try again.");
+        //   });
+      }
+    }
+    
+    // Live updates - poll for new data every 30 seconds
+    setInterval(() => {
+      fetch('/RealTimeTrackerProject/backend/api/getAllTripsWithLocation.php')
+        .then(res => res.json())
+        .then(data => {
+          window.allTrips = data;
+          filterTrips(); // Apply current filters to new data
+        })
+        .catch(err => {
+          console.error("Failed to update trips:", err);
+        });
+    }, 30000);
+  </script>
+</body>
+</html>
