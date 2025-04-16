@@ -1,5 +1,12 @@
 <?php
+header('Content-Type: application/json');
+date_default_timezone_set("Asia/Kolkata");
+
 $conn = new mysqli("localhost", "root", "", "realtime_tracker");
+
+if ($conn->connect_error) {
+    die(json_encode(["error" => "Connection failed"]));
+}
 
 $sql = "SELECT t.*, v.vehicle_number, v.type,
         (SELECT latitude FROM location l WHERE l.trip_id = t.trip_id ORDER BY l.timestamp DESC LIMIT 1) AS latitude,
@@ -9,14 +16,18 @@ $sql = "SELECT t.*, v.vehicle_number, v.type,
         ORDER BY t.start_time DESC";
 
 $res = $conn->query($sql);
-$trips = [];
 
+if (!$res) {
+    die(json_encode(["error" => "Query failed: " . $conn->error]));
+}
+
+$trips = [];
 while ($row = $res->fetch_assoc()) {
     $now = date('Y-m-d H:i:s');
     if ($now < $row['start_time']) $row['status'] = 'Not Started';
     elseif ($now > $row['end_time']) $row['status'] = 'Completed';
     else $row['status'] = 'Running';
-
+    
     $trips[] = $row;
 }
 

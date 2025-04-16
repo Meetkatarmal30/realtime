@@ -186,6 +186,28 @@
     .icon-text i {
       color: var(--primary);
     }
+    
+    /* Success message styles */
+    .success-message {
+      background-color: #d4edda;
+      color: #155724;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      text-align: center;
+      border-left: 5px solid #2ecc71;
+      display: none;
+    }
+    
+    .success-message a {
+      color: #155724;
+      text-decoration: underline;
+      font-weight: 600;
+    }
+    
+    .success-message a:hover {
+      color: #0f3e19;
+    }
   </style>
 </head>
 <body>
@@ -195,7 +217,12 @@
       <p class="subtitle">Schedule a new bus or train trip with route information</p>
     </header>
     
-    <form action="/RealTimeTrackerProject/backend/api/add_trip.php" method="POST">
+    <!-- Success message div -->
+    <div id="successMessage" class="success-message">
+      <i class="fas fa-check-circle"></i> Trip and route added successfully. <a href="trip_schedule.html">Go to Trip Schedule</a>
+    </div>
+    
+    <form id="tripForm" action="/RealTimeTrackerProject/backend/api/add_trip.php" method="POST">
       <div class="card">
         <div class="form-group">
           <label for="vehicle_number">Vehicle Number</label>
@@ -380,6 +407,37 @@
       const bounds = L.latLngBounds([startPos, endPos]);
       map.fitBounds(bounds, { padding: [50, 50] });
     }
+
+    // Form submission handler
+    document.getElementById('tripForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const form = this;
+      const formData = new FormData(form);
+      
+      fetch(form.action, {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => {
+        if (response.ok) {
+          // Show success message
+          document.getElementById('successMessage').style.display = 'block';
+          
+          // Scroll to success message
+          document.getElementById('successMessage').scrollIntoView({ behavior: 'smooth' });
+          
+          // Optionally clear form
+          // form.reset();
+        } else {
+          alert('Error: Something went wrong. Please try again.');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Error: Could not submit the form. Please try again later.');
+      });
+    });
   </script>
 </body>
 </html>

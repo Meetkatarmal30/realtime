@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Real-Time Bus/Train Tracker</title>
+  <title>Real-Time Transport Tracker</title>
 
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -12,102 +12,110 @@
   
   <style>
     :root {
-      --primary: #2196f3;
-      --primary-dark: #1976d2;
-      --primary-light: #bbdefb;
-      --secondary: #1e88e5;
-      --text-light: #f5f5f5;
-      --text-dark: #333;
-      --bg-light: #f4f9ff;
+      --primary: #2196F3;
+      --primary-dark: #1976D2;
+      --primary-light: #BBDEFB;
+      --secondary: #42A5F5;
+      --text-light: #ffffff;
+      --text-dark: #333333;
+      --bg-light: #f9f9f9;
       --bg-gray: #f1f5f9;
       --shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     }
-    
+
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-    
+
     body {
       font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg-light);
       color: var(--text-dark);
       line-height: 1.6;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
 
     header {
       background: linear-gradient(135deg, var(--primary), var(--secondary));
       color: white;
-      padding: 1.5rem;
+      padding: 1rem;
       text-align: center;
       box-shadow: var(--shadow);
-      position: relative;
-      z-index: 100;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .header-content {
-      max-width: 1200px;
-      margin: 0 auto;
       display: flex;
       justify-content: center;
       align-items: center;
     }
 
-    .logo {
-      font-size: 2rem;
-      margin-right: 0.5rem;
-    }
-
-    h1 {
-      font-size: 1.8rem;
-      font-weight: 600;
-    }
-
-    .button-bar {
+    .nav-buttons {
       display: flex;
-      justify-content: center;
-      padding: 1rem;
-      background-color: white;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-      position: relative;
-      z-index: 99;
+      gap: 10px;
     }
 
-    .nav-button {
-      background-color: var(--primary);
+    .header-button {
+      background-color: rgba(255, 255, 255, 0.2);
       color: white;
       border: none;
-      padding: 0.75rem 1.25rem;
-      margin: 0 0.5rem;
+      padding: 0.5rem 1rem;
       border-radius: 8px;
-      font-size: 1rem;
+      font-size: 0.9rem;
       cursor: pointer;
       transition: all 0.2s ease;
       display: flex;
       align-items: center;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
 
-    .nav-button:hover {
-      background-color: var(--primary-dark);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    .header-button:hover {
+      background-color: rgba(255, 255, 255, 0.3);
     }
 
-    .nav-button i {
-      margin-right: 8px;
+    .header-button i {
+      margin-right: 6px;
+    }
+
+    .logo {
+      font-size: 1.8rem;
+      margin-right: 0.5rem;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 600;
+    }
+
+    .content-container {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .map-container {
+      flex: 1;
+      position: relative;
+      min-height: 300px;
     }
 
     #map {
-      height: calc(100vh - 140px);
+      height: 100%;
       width: 100%;
       z-index: 1;
     }
 
     #statusBox {
       position: absolute;
-      top: 100px;
+      top: 20px;
       right: 20px;
       z-index: 1000;
       background: white;
@@ -152,32 +160,175 @@
     }
 
     .blue {
-      background-color: blue;
+      background-color: var(--primary);
+    }
+    
+    .vehicle-info-container {
+      background: white;
+      padding: 15px;
+      box-shadow: 0 -4px 10px rgba(0,0,0,0.1);
+      max-height: 30vh;
+      overflow-y: auto;
+      z-index: 5;
+    }
+    
+    .active-trips {
+      display: flex;
+      overflow-x: auto;
+      padding: 10px 0;
+      gap: 15px;
+    }
+    
+    .trip-card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      min-width: 250px;
+      padding: 15px;
+      border-left: 5px solid var(--primary);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .trip-card:hover {
+      transform: translateY(-3px);
+    }
+    
+    .trip-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    
+    .route-name {
+      font-weight: bold;
+      font-size: 1.1rem;
+      color: var(--primary-dark);
+    }
+    
+    .vehicle-number {
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      padding: 3px 8px;
+      border-radius: 5px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    
+    .trip-details {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    
+    .detail-row {
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+      color: #666;
+    }
+    
+    .detail-row i {
+      margin-right: 8px;
+      color: var(--primary);
+      width: 18px;
+      text-align: center;
+    }
+    
+    .status-badge {
+      background: #e6f7e6;
+      color: #388e3c;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      margin-top: 10px;
+    }
+    
+    .status-badge i {
+      margin-right: 5px;
+      font-size: 0.7rem;
+    }
+    
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+    }
+    
+    .section-title i {
+      margin-right: 8px;
+      color: var(--primary);
+    }
+    
+    .action-button {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.8rem 1.5rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 1000;
+      box-shadow: var(--shadow);
+    }
+    
+    .action-button:hover {
+      background-color: var(--primary-dark);
+      transform: translateY(-2px);
+    }
+    
+    .action-button i {
+      margin-right: 8px;
     }
 
     @media (max-width: 768px) {
-      .button-bar {
-        flex-wrap: wrap;
+      header {
+        flex-direction: column;
+        padding: 0.8rem;
       }
       
-      .nav-button {
-        margin: 0.5rem;
+      .nav-buttons {
+        margin-top: 0.5rem;
       }
       
+      .header-button {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+      }
+
       #statusBox {
-        top: auto;
-        bottom: 130px;
-        left: 50%;
-        transform: translateX(-50%);
+        top: 10px;
+        right: 10px;
+        max-width: calc(100% - 20px);
+        padding: 8px 15px;
+      }
+
+      .legend {
+        bottom: 10px;
+        left: 10px;
         right: auto;
-        width: 90%;
-        max-width: 90%;
       }
       
-      .legend {
-        bottom: 20px;
-        left: 20px;
-        right: auto;
+      .trip-card {
+        min-width: 280px;
+      }
+      
+      .action-button {
+        bottom: 15px;
+        left: 15px;
+        padding: 0.6rem 1.2rem;
       }
     }
   </style>
@@ -186,30 +337,46 @@
 
   <header>
     <div class="header-content">
-      <i class="fas fa-route logo"></i>
-      <h1>Real-Time Bus/Train Tracker</h1>
+      <i class="fas fa-bus logo"></i>
+      <h1>Real-Time Transport Tracker</h1>
+    </div>
+    <div class="nav-buttons">
+      <button class="header-button" onclick="window.location.href='submitFeedback.html'">
+        <i class="fas fa-comment-alt"></i> Feedback
+      </button>
+      <button class="header-button" onclick="window.location.href='admin_login.html'">
+        <i class="fas fa-lock"></i> Admin
+      </button>
+      <button class="header-button" onclick="window.location.href='view_schedule.html'">
+        <i class="fas fa-calendar-alt"></i> Schedule
+      </button>
     </div>
   </header>
 
-  <div class="button-bar">
-    <button class="nav-button" onclick="window.location.href='submitFeedback.html'">
-      <i class="fas fa-comment-alt"></i> Give Feedback
-    </button>
-    <button class="nav-button" onclick="window.location.href='admin_login.html'">
-      <i class="fas fa-lock"></i> Admin Login
-    </button>
-    <button class="nav-button" onclick="window.location.href='view_schedule.html'">
-      <i class="fas fa-calendar-alt"></i> View Schedule
-    </button>
-  </div>
+  <div class="content-container">
+    <div class="map-container">
+      <div id="map"></div>
+      <div id="statusBox"><i class="fas fa-sync fa-spin"></i> <span id="statusText">Loading active buses/trains...</span></div>
 
-  <div id="map"></div>
-  <div id="statusBox"><i class="fas fa-sync fa-spin"></i> <span id="statusText">Tracking vehicle...</span></div>
-  
-  <div class="legend">
-    <div class="legend-item">
-      <div class="color-box blue"></div>
-      <div>Route Path</div>
+      <div class="legend">
+        <div class="legend-item">
+          <div class="color-box blue"></div>
+          <div>Route Path</div>
+        </div>
+      </div>
+      
+      <button class="action-button" onclick="refreshMap()">
+        <i class="fas fa-sync"></i> Refresh Map
+      </button>
+    </div>
+    
+    <div class="vehicle-info-container">
+      <div class="section-title">
+        <i class="fas fa-route"></i> Active Trips
+      </div>
+      <div class="active-trips" id="activeTripsContainer">
+        <!-- Trip cards will be inserted here dynamically -->
+      </div>
     </div>
   </div>
 
@@ -217,89 +384,419 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
-    const map = L.map('map').setView([12.961, 77.641], 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
+    // Initialize the map with a default view
+    let map = null;
+    
+    // Store markers and animations for each trip
+    const activeMarkers = {};
+    const activeAnimations = {};
+    const activePolylines = {};
+
+    // Wait for DOM to fully load before initializing the map
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize the map
+      map = L.map('map').setView([12.961, 77.641], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+
+      // Start loading data
+      fetchAllActiveTrips();
+    });
 
     const statusBox = document.getElementById("statusBox");
     const statusText = document.getElementById("statusText");
-    let marker, currentIndex = 0;
-
-    fetch('http://localhost/RealTimeTrackerProject/backend/api/getActiveTrip.php')
-      .then(res => res.json())
-      .then(trip => {
-        if (!trip || !trip.trip_id) {
-          statusText.innerText = "No active trip currently.";
-          statusBox.innerHTML = '<i class="fas fa-exclamation-circle"></i> No active trip currently.';
+    const activeTripsContainer = document.getElementById("activeTripsContainer");
+    
+    async function fetchAllActiveTrips() {
+      try {
+        statusBox.innerHTML = '<i class="fas fa-sync fa-spin"></i> <span id="statusText">Loading active trips...</span>';
+        
+        const response = await fetch('getAllTripsWithLocation.php');
+        if (!response.ok) {
+          throw new Error('Failed to fetch trips');
+        }
+        
+        const trips = await response.json();
+        
+        if (!trips || trips.length === 0) {
+          statusBox.innerHTML = '<i class="fas fa-info-circle"></i> No active trips currently.';
+          activeTripsContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: #666;">No active buses or trains at the moment</p>';
+          return;
+        }
+        
+        // Clear any existing trips
+        activeTripsContainer.innerHTML = '';
+        
+        // Process each trip
+        for(const trip of trips) {
+          createTripCard(trip);
+          await fetchTripDetails(trip.trip_id);
+        }
+        
+        statusBox.innerHTML = '<i class="fas fa-check-circle"></i> Showing ' + trips.length + ' trips';
+        
+      } catch (err) {
+        console.error('Error fetching trips:', err);
+        statusBox.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error fetching trips.';
+        activeTripsContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: #666;">Error loading trip data</p>';
+      }
+    }
+    
+    async function fetchTripDetails(tripId) {
+      try {
+        // Fetch route points
+        const routeResponse = await fetch(`getRoute.php?trip_id=${tripId}`);
+        if (!routeResponse.ok) {
+          throw new Error(`Failed to fetch route for trip ${tripId}`);
+        }
+        
+        const routePoints = await routeResponse.json();
+        
+        if (!routePoints || routePoints.length === 0) {
+          console.warn(`No route points found for trip ${tripId}`);
           return;
         }
 
-        const tripId = trip.trip_id;
-        const startTime = new Date(trip.start_time);
-        const endTime = new Date(trip.end_time);
-        const totalDurationMs = endTime - startTime;
+        // Get the trip details with current location
+        const tripResponse = await fetch(`getAllTripsWithLocation.php?trip_id=${tripId}`);
+        const tripData = await tripResponse.json();
+        const currentTrip = Array.isArray(tripData) 
+          ? tripData.find(t => t.trip_id == tripId) || {}
+          : tripData;
 
-        if (totalDurationMs <= 0) {
-          statusBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Invalid trip time.';
-          return;
-        }
+        // Prepare the route data
+        const latlngs = routePoints.map(p => [parseFloat(p.latitude), parseFloat(p.longitude)]);
+        
+        // Display the route with current position
+        displayAndAnimateRoute({
+          ...currentTrip,
+          route: latlngs
+        }, latlngs);
 
-        return fetch(`http://localhost/RealTimeTrackerProject/backend/api/getRoute.php?trip_id=${tripId}`);
-      })
-      .then(res => res ? res.json() : null)
-      .then(data => {
-        if (!data || !data.length) {
-          statusBox.innerHTML = '<i class="fas fa-exclamation-circle"></i> No route data found.';
-          return;
-        }
+      } catch (err) {
+        console.error(`Error processing trip ${tripId}:`, err);
+      }
+    }
+    
+    function displayAndAnimateRoute(trip, latlngs) {
+      // Remove any existing polyline for this trip
+      if (activePolylines[trip.trip_id]) {
+        map.removeLayer(activePolylines[trip.trip_id]);
+      }
+      
+      // Create polyline for the route
+      const polyline = L.polyline(latlngs, {
+        color: '#2196F3',
+        weight: 5,
+        opacity: 0.7,
+        lineJoin: 'round'
+      }).addTo(map);
+      
+      // Store polyline for this trip
+      activePolylines[trip.trip_id] = polyline;
 
-        const latlngs = data.map(p => [p.latitude, p.longitude]);
-        const polyline = L.polyline(latlngs, { 
-          color: 'blue',
-          weight: 5,
-          opacity: 0.7,
-          lineJoin: 'round'
-        }).addTo(map);
+      // Set view to fit the route if this is the first trip
+      if (Object.keys(activeMarkers).length === 0) {
         map.fitBounds(polyline.getBounds());
+      }
 
-        const icon = L.icon({
-          iconUrl: 'https://cdn-icons-png.flaticon.com/512/201/201818.png',
-          iconSize: [40, 40],
-          iconAnchor: [20, 40]
-        });
-
-        marker = L.marker(latlngs[0], { icon }).addTo(map)
-          .bindPopup("<b>🚍 In Transit</b><br>On schedule").openPopup();
-
-        const stepTime = (totalDurationMs / (latlngs.length - 1));
-
-        const animate = () => {
-          if (currentIndex >= latlngs.length) {
-            statusBox.innerHTML = '<i class="fas fa-check-circle"></i> Bus/Train has reached destination!';
-            marker.bindPopup("<b>🎉 Destination</b><br>Vehicle has arrived").openPopup();
-            return;
-          }
-
-          const [lat, lng] = latlngs[currentIndex];
-          marker.setLatLng([lat, lng]);
-          map.panTo([lat, lng]);
-          
-          // Update progress info
-          const progress = Math.round((currentIndex / (latlngs.length - 1)) * 100);
-          statusBox.innerHTML = `<i class="fas fa-bus"></i> Vehicle in transit (${progress}% complete)`;
-          
-          currentIndex++;
-          setTimeout(animate, stepTime);
-        };
-
-        animate();
-      })
-      .catch(err => {
-        console.error("Error loading active trip or route:", err);
-        statusBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Failed to load route.';
+      // Create vehicle icon based on type (bus or train)
+      const iconUrl = trip.type === 'train' 
+        ? 'https://cdn-icons-png.flaticon.com/512/3066/3066953.png'
+        : 'https://cdn-icons-png.flaticon.com/512/201/201818.png';
+        
+      const icon = L.icon({
+        iconUrl: iconUrl,
+        iconSize: [36, 36],
+        iconAnchor: [18, 36],
+        popupAnchor: [0, -36]
       });
+
+      // Remove any existing marker for this trip
+      if (activeMarkers[trip.trip_id]) {
+        map.removeLayer(activeMarkers[trip.trip_id]);
+      }
+      
+      // Determine current position
+      let currentPos = latlngs[0];
+      
+      // If we have current lat/long directly from the trip data, use that
+      if (trip.latitude && trip.longitude) {
+        currentPos = [parseFloat(trip.latitude), parseFloat(trip.longitude)];
+      }
+
+      // Create marker at current position
+      const marker = L.marker(currentPos, { icon }).addTo(map)
+        .bindPopup(`
+          <b>${trip.route_name}</b><br>
+          ${trip.vehicle_number}<br>
+          <span style="color:#1976D2">
+            <i class="fas fa-info-circle"></i> ${trip.type.charAt(0).toUpperCase() + trip.type.slice(1)}
+          </span>
+        `);
+
+      // Store marker for this trip
+      activeMarkers[trip.trip_id] = marker;
+
+      // Calculate animation timing
+      const startTime = new Date(trip.start_time);
+      const endTime = new Date(trip.end_time);
+      const totalDurationMs = endTime - startTime;
+      const now = new Date();
+      
+      if (now > endTime) {
+        // Trip already complete
+        marker.setLatLng(latlngs[latlngs.length - 1]);
+        updateTripCardStatus(trip.trip_id, 'complete');
+      } else if (now < startTime) {
+        // Trip hasn't started
+        marker.setLatLng(latlngs[0]);
+        updateTripCardStatus(trip.trip_id, 'scheduled');
+      } else {
+        // Trip in progress - calculate position
+        const elapsedMs = now - startTime;
+        const progressPercent = Math.min(1, elapsedMs / totalDurationMs);
+        const currentPointIndex = Math.floor(progressPercent * (latlngs.length - 1));
+        
+        // If we don't have a current position from the data, use the calculated one
+        if (!trip.latitude || !trip.longitude) {
+          marker.setLatLng(latlngs[currentPointIndex]);
+        }
+        
+        // Continue animation from current position
+        let startIndex = 0;
+        let currentPosition = [parseFloat(trip.latitude), parseFloat(trip.longitude)];
+        
+        // Find closest point on the route to current position
+        if (trip.latitude && trip.longitude) {
+          let minDist = Infinity;
+          for (let i = 0; i < latlngs.length; i++) {
+            const dist = distanceBetween(currentPosition, latlngs[i]);
+            if (dist < minDist) {
+              minDist = dist;
+              startIndex = i;
+            }
+          }
+        } else {
+          startIndex = currentPointIndex;
+        }
+        
+        // Calculate remaining points and time
+        const remainingPoints = latlngs.slice(startIndex);
+        const remainingTime = endTime - now;
+        
+        if (remainingPoints.length > 1 && remainingTime > 0) {
+          animateMarker(marker, remainingPoints, remainingTime, trip.trip_id);
+        }
+      }
+    }
+    
+    function createTripCard(trip) {
+      // Check if card already exists, if so, update it
+      const existingCard = document.querySelector(`.trip-card[data-trip-id="${trip.trip_id}"]`);
+      if (existingCard) {
+        existingCard.remove();
+      }
+      
+      const tripCard = document.createElement('div');
+      tripCard.className = 'trip-card';
+      tripCard.setAttribute('data-trip-id', trip.trip_id);
+      
+      // Calculate remaining time
+      const now = new Date();
+      const endTime = new Date(trip.end_time);
+      const remainingMinutes = Math.max(0, Math.floor((endTime - now) / 60000));
+      
+      // Determine current status
+      let status = 'active';
+      let statusDisplay = 'Active';
+      
+      if (now > endTime) {
+        status = 'complete';
+        statusDisplay = 'Completed';
+      } else if (now < new Date(trip.start_time)) {
+        status = 'scheduled';
+        statusDisplay = 'Scheduled';
+      }
+      
+      // Determine destination and current stop (placeholder)
+      const destination = trip.route_name.split(' to ')[1] || 'End Point';
+      const currentStop = 'En Route';
+      
+      tripCard.innerHTML = `
+        <div class="trip-header">
+          <div class="route-name">${trip.route_name}</div>
+          <div class="vehicle-number">${trip.vehicle_number}</div>
+        </div>
+        <div class="trip-details">
+          <div class="detail-row">
+            <i class="fas fa-map-marker-alt"></i>
+            <span>Current: ${currentStop}</span>
+          </div>
+          <div class="detail-row">
+            <i class="fas fa-flag-checkered"></i>
+            <span>Destination: ${destination}</span>
+          </div>
+          <div class="detail-row">
+            <i class="fas fa-clock"></i>
+            <span>ETA: ${remainingMinutes} minutes</span>
+          </div>
+          <div class="status-badge">
+            <i class="fas fa-circle"></i> ${statusDisplay}
+          </div>
+        </div>
+      `;
+      
+      // Add click event to focus on this trip on the map
+      tripCard.addEventListener('click', () => {
+        focusOnTrip(trip.trip_id);
+      });
+      
+      activeTripsContainer.appendChild(tripCard);
+      
+      // Return the card for possible further modifications
+      return tripCard;
+    }
+    
+    function updateTripCardStatus(tripId, status) {
+      const tripCard = document.querySelector(`.trip-card[data-trip-id="${tripId}"]`);
+      if (!tripCard) return;
+      
+      const statusBadge = tripCard.querySelector('.status-badge');
+      if (!statusBadge) return;
+      
+      let statusDisplay = 'Active';
+      let badgeStyle = { bg: '#e6f7e6', color: '#388e3c' };
+      
+      switch(status) {
+        case 'complete':
+          statusDisplay = 'Completed';
+          badgeStyle = { bg: '#e3f2fd', color: '#1976d2' };
+          break;
+        case 'scheduled':
+          statusDisplay = 'Scheduled';
+          badgeStyle = { bg: '#fff8e1', color: '#ff8f00' };
+          break;
+        case 'delayed':
+          statusDisplay = 'Delayed';
+          badgeStyle = { bg: '#ffebee', color: '#c62828' };
+          break;
+      }
+      
+      statusBadge.innerHTML = `<i class="fas fa-circle"></i> ${statusDisplay}`;
+      statusBadge.style.background = badgeStyle.bg;
+      statusBadge.style.color = badgeStyle.color;
+    }
+    
+    function focusOnTrip(tripId) {
+      const marker = activeMarkers[tripId];
+      if (marker) {
+        map.setView(marker.getLatLng(), 16);
+        marker.openPopup();
+        
+        // Highlight the selected card
+        document.querySelectorAll('.trip-card').forEach(card => {
+          card.style.borderLeft = '5px solid var(--primary)';
+          card.style.transform = 'none';
+        });
+        
+        const selectedCard = document.querySelector(`.trip-card[data-trip-id="${tripId}"]`);
+        if (selectedCard) {
+          selectedCard.style.borderLeft = '5px solid #4CAF50';
+          selectedCard.style.transform = 'translateY(-3px)';
+        }
+      }
+    }
+    
+    function animateMarker(marker, points, duration, tripId) {
+      // Cancel any existing animation for this trip
+      if (activeAnimations[tripId]) {
+        clearInterval(activeAnimations[tripId]);
+      }
+      
+      const startTime = Date.now();
+      const endTime = startTime + duration;
+      let lastPointIndex = 0;
+      
+      const interval = setInterval(() => {
+        const now = Date.now();
+        
+        if (now >= endTime) {
+          // Animation complete
+          marker.setLatLng(points[points.length - 1]);
+          clearInterval(interval);
+          delete activeAnimations[tripId];
+          
+          // Update trip card status
+          updateTripCardStatus(tripId, 'complete');
+          return;
+        }
+        
+        const elapsedMs = now - startTime;
+        const progressPercent = elapsedMs / duration;
+        const pointIndex = Math.min(
+          points.length - 1, 
+          Math.floor(progressPercent * (points.length - 1))
+        );
+        
+        // Only update if position changed
+        if (pointIndex > lastPointIndex) {
+          marker.setLatLng(points[pointIndex]);
+          lastPointIndex = pointIndex;
+          
+          // Update trip card ETA
+          const remainingMs = endTime - now;
+          const remainingMinutes = Math.max(0, Math.ceil(remainingMs / 60000));
+          
+          const tripCard = document.querySelector(`.trip-card[data-trip-id="${tripId}"]`);
+          if (tripCard) {
+            const etaElement = tripCard.querySelector('.detail-row:nth-child(3) span');
+            if (etaElement) {
+              etaElement.textContent = `ETA: ${remainingMinutes} minutes`;
+            }
+          }
+        }
+      }, 1000); // Update every second
+      
+      // Store animation interval for possible cancellation
+      activeAnimations[tripId] = interval;
+    }
+
+    function refreshMap() {
+      // Clear existing markers and animations
+      Object.values(activeMarkers).forEach(marker => {
+        if (map) marker.remove();
+      });
+      
+      Object.values(activeAnimations).forEach(interval => {
+        clearInterval(interval);
+      });
+      
+      // Clear collections
+      Object.keys(activeMarkers).forEach(key => delete activeMarkers[key]);
+      Object.keys(activeAnimations).forEach(key => delete activeAnimations[key]);
+      
+      // Remove all polylines
+      Object.values(activePolylines).forEach(polyline => {
+        if (map) map.removeLayer(polyline);
+      });
+      Object.keys(activePolylines).forEach(key => delete activePolylines[key]);
+      
+      // Fetch fresh data
+      fetchAllActiveTrips();
+    }
+    
+    // Calculate distance between two points (simple Euclidean distance)
+    function distanceBetween(point1, point2) {
+      const lat1 = point1[0];
+      const lon1 = point1[1];
+      const lat2 = point2[0];
+      const lon2 = point2[1];
+      
+      return Math.sqrt(Math.pow(lat2 - lat1, 2) + Math.pow(lon2 - lon1, 2));
+    }
   </script>
 </body>
 </html>

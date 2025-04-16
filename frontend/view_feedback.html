@@ -2,38 +2,272 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>View Feedback</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f0f9ff;
+      padding: 20px;
+    }
+    
+    .card {
+      border: none;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      margin-bottom: 1.5rem;
+    }
+    
+    .card-header {
+      background-color: white;
+      border-bottom: 1px solid #e5e7eb;
+      font-weight: 600;
+      border-top-left-radius: 0.75rem !important;
+      border-top-right-radius: 0.75rem !important;
+    }
+    
+    .table th {
+      background-color: #2563eb;
+      color: white;
+      font-weight: 500;
+    }
+    
+    .feedback-card {
+      background: white;
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      border-left: 4px solid #10b981;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    
+    .rating {
+      color: #f59e0b;
+      font-size: 1.1rem;
+    }
+    
+    .badge-pending {
+      background-color: #fee2e2;
+      color: #b91c1c;
+    }
+    
+    .badge-resolved {
+      background-color: #d1fae5;
+      color: #047857;
+    }
+    
+    .feedback-stats {
+      background-color: rgba(37, 99, 235, 0.1);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      text-align: center;
+    }
+    
+    .feedback-stats h4 {
+      font-size: 1.5rem;
+      margin-bottom: 0.25rem;
+    }
+    
+    .feedback-stats p {
+      color: #4b5563;
+      margin-bottom: 0;
+    }
+  </style>
 </head>
-<body class="bg-light">
-  <div class="container mt-4">
-    <h2 class="mb-4">User Feedback</h2>
-    <table class="table table-bordered table-striped">
-      <thead class="table-dark">
-        <tr>
-          <th>Trip ID</th>
-          <th>Feedback</th>
-          <th>Submitted At</th>
-        </tr>
-      </thead>
-      <tbody id="feedbackTable"></tbody>
-    </table>
+<body>
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 class="text-primary"><i class="fas fa-comments me-2"></i>User Feedback</h2>
+      <div>
+        <button class="btn btn-outline-primary me-2"><i class="fas fa-download me-1"></i>Export</button>
+        <button class="btn btn-outline-secondary"><i class="fas fa-filter me-1"></i>Filter</button>
+      </div>
+    </div>
+    
+    <!-- Feedback Stats -->
+    <div class="row mb-4">
+      <div class="col-md-3 mb-3">
+        <div class="feedback-stats">
+          <h4>127</h4>
+          <p>Total Feedback</p>
+        </div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="feedback-stats">
+          <h4>4.2 <small class="text-muted">/5</small></h4>
+          <p>Average Rating</p>
+        </div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="feedback-stats">
+          <h4>89</h4>
+          <p>Resolved</p>
+        </div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="feedback-stats">
+          <h4>38</h4>
+          <p>Pending</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Feedback Table -->
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center py-3">
+        <h5 class="mb-0">Recent Feedback</h5>
+        <div class="input-group" style="max-width: 300px;">
+          <input type="text" class="form-control" placeholder="Search feedback...">
+          <button class="btn btn-outline-secondary" type="button">
+            <i class="fas fa-search"></i>
+          </button>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Trip ID</th>
+                <th>Vehicle</th>
+                <th>Rating</th>
+                <th>Feedback</th>
+                <th>Submitted At</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="feedbackTable">
+              <!-- Feedback entries will be loaded here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer bg-white">
+        <nav>
+          <ul class="pagination justify-content-center mb-0">
+            <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
+            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+            <li class="page-item"><a class="page-link" href="#">2</a></li>
+            <li class="page-item"><a class="page-link" href="#">3</a></li>
+            <li class="page-item"><a class="page-link" href="#">Next</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
   </div>
 
   <script>
+    // Sample data - replace with actual API call
+    const feedbackData = [
+      {
+        trip_id: "T-2504",
+        vehicle: "Bus A1",
+        rating: 3,
+        feedback_text: "The bus was on time but the AC wasn't working properly.",
+        submitted_at: "2025-04-14 08:32",
+        status: "Pending"
+      },
+      {
+        trip_id: "T-2501",
+        vehicle: "Train X2",
+        rating: 5,
+        feedback_text: "Great service, the driver was very helpful with my luggage.",
+        submitted_at: "2025-04-14 07:15",
+        status: "Resolved"
+      },
+      {
+        trip_id: "T-2498",
+        vehicle: "Bus B3",
+        rating: 2,
+        feedback_text: "The bus was 10 minutes late. Please improve the timing.",
+        submitted_at: "2025-04-13 18:45",
+        status: "Pending"
+      },
+      {
+        trip_id: "T-2495",
+        vehicle: "Shuttle C7",
+        rating: 4,
+        feedback_text: "Clean vehicle and smooth ride. Would be perfect if WiFi was working.",
+        submitted_at: "2025-04-13 14:20",
+        status: "Resolved"
+      }
+    ];
+
+    const tbody = document.getElementById("feedbackTable");
+
+    // Function to generate star rating HTML
+    function generateStars(rating) {
+      let stars = '';
+      for (let i = 1; i <= 5; i++) {
+        if (i <= rating) {
+          stars += '<i class="fas fa-star"></i>';
+        } else {
+          stars += '<i class="far fa-star"></i>';
+        }
+      }
+      return stars;
+    }
+
+    // Render feedback data
+    feedbackData.forEach(entry => {
+      const row = document.createElement("tr");
+      const statusClass = entry.status === "Pending" ? "badge-pending" : "badge-resolved";
+      
+      row.innerHTML = `
+        <td>${entry.trip_id}</td>
+        <td>${entry.vehicle}</td>
+        <td><div class="rating">${generateStars(entry.rating)}</div></td>
+        <td>${entry.feedback_text}</td>
+        <td>${entry.submitted_at}</td>
+        <td><span class="badge rounded-pill ${statusClass} px-3 py-2">${entry.status}</span></td>
+        <td>
+          <button class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></button>
+          ${entry.status === "Pending" ? '<button class="btn btn-sm btn-outline-success"><i class="fas fa-check"></i></button>' : ''}
+        </td>
+      `;
+      
+      tbody.appendChild(row);
+    });
+
+    // You would replace this with your actual API call:
+    /*
     fetch("../../backend/api/getFeedback.php")
       .then(res => res.json())
       .then(data => {
         const tbody = document.getElementById("feedbackTable");
-        data.forEach(entry => {
-          tbody.innerHTML += `
-            <tr>
+        
+        if (!data.length) {
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4">No feedback entries found.</td></tr>';
+        } else {
+          data.forEach(entry => {
+            const row = document.createElement("tr");
+            const statusClass = entry.status === "Pending" ? "badge-pending" : "badge-resolved";
+            
+            row.innerHTML = `
               <td>${entry.trip_id}</td>
+              <td>${entry.vehicle || 'Unknown'}</td>
+              <td><div class="rating">${generateStars(entry.rating || 0)}</div></td>
               <td>${entry.feedback_text}</td>
               <td>${entry.submitted_at}</td>
-            </tr>`;
-        });
+              <td><span class="badge rounded-pill ${statusClass} px-3 py-2">${entry.status || 'Pending'}</span></td>
+              <td>
+                <button class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></button>
+                ${entry.status !== "Resolved" ? '<button class="btn btn-sm btn-outline-success"><i class="fas fa-check"></i></button>' : ''}
+              </td>
+            `;
+            
+            tbody.appendChild(row);
+          });
+        }
+      })
+      .catch(err => {
+        console.error("Error loading feedback:", err);
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Error loading feedback data. Please try again later.</td></tr>';
       });
+    */
   </script>
 </body>
 </html>
