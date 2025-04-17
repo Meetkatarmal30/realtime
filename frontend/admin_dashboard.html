@@ -182,8 +182,10 @@
     <h2>Trip Management Dashboard</h2>
     <div class="nav-buttons">
       <button onclick="location.href='view_feedback.html'">View Feedback</button>
-      <button onclick="location.href='manage_vehicles.html'">Manage Vehicle</button>
       <button onclick="location.href='trip_schedule.html'">Trip Schedule</button>
+      <button id="logoutBtn" style="background-color: #e74c3c;">
+        <i class="fas fa-sign-out-alt"></i> Logout
+      </button>
     </div>
   </div>
 
@@ -220,6 +222,7 @@
     const typeFilter = document.getElementById("typeFilter");
     const loadingState = document.getElementById("loadingState");
     const errorMessage = document.getElementById("errorMessage");
+    const logoutBtn = document.getElementById("logoutBtn");
 
     // API endpoint path
     const API_URL = '/RealTimeTrackerProject/backend/api/getAllTripsWithLocation.php';
@@ -261,17 +264,13 @@
               <th>End Time</th>
               <th>Current Location</th>
               <th>Status</th>
-              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             ${data.map(trip => {
-              // Format location display
               const location = trip.latitude && trip.longitude 
                 ? `${parseFloat(trip.latitude).toFixed(5)}, ${parseFloat(trip.longitude).toFixed(5)}` 
                 : 'No location data';
-
-              // Create status class (replace spaces with hyphens for CSS)
               const statusClass = trip.status ? trip.status.replace(/\s+/g, '-') : '';
               
               return `
@@ -284,11 +283,6 @@
                   <td>${formatDateTime(trip.end_time)}</td>
                   <td>${location}</td>
                   <td><span class="status-pill status-${statusClass}">${trip.status}</span></td>
-                  <td class="table-actions">
-                    <button class="action-btn view-btn" title="View" onclick="viewTrip(${trip.trip_id})"><i class="fas fa-eye"></i></button>
-                    <button class="action-btn edit-btn" title="Edit" onclick="editTrip(${trip.trip_id})"><i class="fas fa-edit"></i></button>
-                    <button class="action-btn delete-btn" title="Delete" onclick="deleteTrip(${trip.trip_id})"><i class="fas fa-trash-alt"></i></button>
-                  </td>
                 </tr>
               `;
             }).join("")}
@@ -303,7 +297,7 @@
       
       const date = new Date(dateTimeStr);
       if (isNaN(date.getTime())) {
-        return dateTimeStr; // Return as is if invalid date
+        return dateTimeStr;
       }
       return date.toLocaleString('en-US', {
         year: 'numeric',
@@ -324,7 +318,6 @@
         const matchesSearch = 
           (trip.vehicle_number && trip.vehicle_number.toLowerCase().includes(searchValue)) || 
           (trip.route_name && trip.route_name.toLowerCase().includes(searchValue));
-        
         const matchesStatus = statusValue === "all" || trip.status === statusValue;
         const matchesType = typeValue === "all" || (trip.type && trip.type.toLowerCase() === typeValue);
         
@@ -332,6 +325,24 @@
       });
 
       renderTrips(filtered);
+    }
+
+    async function logout() {
+      try {
+        const response = await fetch('../../backend/logout.php', {
+          method: 'GET',
+          credentials: 'same-origin' // Include cookies in the request
+        });
+        
+        if (response.redirected) {
+          window.location.href = response.url;
+        } else {
+          window.location.href = '../../RealTimeTrackerProject/frontend/index.html';
+        }
+      } catch (error) {
+        console.error('Logout error:', error);
+        window.location.href = '../../RealTimeTrackerProject/frontend/index.html';
+      }
     }
 
     function viewTrip(tripId) {
@@ -344,9 +355,7 @@
 
     function deleteTrip(tripId) {
       if (confirm(`Are you sure you want to delete trip ${tripId}?`)) {
-        // Add your delete API call here
         alert(`Trip ${tripId} has been deleted.`);
-        // After successful deletion, refresh the trip list
         loadTripData();
       }
     }
@@ -359,14 +368,15 @@
       try {
         allTrips = await fetchTrips();
         loadingState.style.display = "none";
-        filterTrips(); // This will render the trips with current filters
+        filterTrips();
       } catch (error) {
         console.error("Failed to load trips:", error);
       }
     }
 
+    // Event listeners
+    logoutBtn.addEventListener('click', logout);
     window.addEventListener("DOMContentLoaded", loadTripData);
-
     searchInput.addEventListener("input", filterTrips);
     statusFilter.addEventListener("change", filterTrips);
     typeFilter.addEventListener("change", filterTrips);

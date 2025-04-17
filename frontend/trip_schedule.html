@@ -164,7 +164,7 @@
     todayDateElem.textContent = today.toLocaleDateString(undefined, options);
 
     // ✅ Load trip data from backend
-    fetch('/RealTimeTrackerProject/backend/api/getTrips.php')
+    fetch('/RealTimeTrackerProject/backend/api/getAllActiveTrips.php')
       .then(res => {
         if (!res.ok) {
           throw new Error('Network response was not ok ' + res.statusText);

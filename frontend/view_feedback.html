@@ -43,21 +43,6 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
     
-    .rating {
-      color: #f59e0b;
-      font-size: 1.1rem;
-    }
-    
-    .badge-pending {
-      background-color: #fee2e2;
-      color: #b91c1c;
-    }
-    
-    .badge-resolved {
-      background-color: #d1fae5;
-      color: #047857;
-    }
-    
     .feedback-stats {
       background-color: rgba(37, 99, 235, 0.1);
       border-radius: 0.5rem;
@@ -88,28 +73,22 @@
     
     <!-- Feedback Stats -->
     <div class="row mb-4">
-      <div class="col-md-3 mb-3">
+      <div class="col-md-4 mb-3">
         <div class="feedback-stats">
-          <h4>127</h4>
+          <h4 id="totalFeedback">0</h4>
           <p>Total Feedback</p>
         </div>
       </div>
-      <div class="col-md-3 mb-3">
+      <div class="col-md-4 mb-3">
         <div class="feedback-stats">
-          <h4>4.2 <small class="text-muted">/5</small></h4>
-          <p>Average Rating</p>
+          <h4 id="latestDate">-</h4>
+          <p>Latest Feedback</p>
         </div>
       </div>
-      <div class="col-md-3 mb-3">
+      <div class="col-md-4 mb-3">
         <div class="feedback-stats">
-          <h4>89</h4>
-          <p>Resolved</p>
-        </div>
-      </div>
-      <div class="col-md-3 mb-3">
-        <div class="feedback-stats">
-          <h4>38</h4>
-          <p>Pending</p>
+          <h4 id="uniqueTrips">0</h4>
+          <p>Unique Trips</p>
         </div>
       </div>
     </div>
@@ -119,7 +98,7 @@
       <div class="card-header d-flex justify-content-between align-items-center py-3">
         <h5 class="mb-0">Recent Feedback</h5>
         <div class="input-group" style="max-width: 300px;">
-          <input type="text" class="form-control" placeholder="Search feedback...">
+          <input type="text" id="searchInput" class="form-control" placeholder="Search feedback...">
           <button class="btn btn-outline-secondary" type="button">
             <i class="fas fa-search"></i>
           </button>
@@ -131,16 +110,15 @@
             <thead>
               <tr>
                 <th>Trip ID</th>
-                <th>Vehicle</th>
-                <th>Rating</th>
-                <th>Feedback</th>
+                <th>Message</th>
                 <th>Submitted At</th>
-                <th>Status</th>
-                <th>Actions</th>
               </tr>
             </thead>
             <tbody id="feedbackTable">
               <!-- Feedback entries will be loaded here -->
+              <tr>
+                <td colspan="3" class="text-center py-4">Loading feedback data...</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -160,114 +138,83 @@
   </div>
 
   <script>
-    // Sample data - replace with actual API call
-    const feedbackData = [
-      {
-        trip_id: "T-2504",
-        vehicle: "Bus A1",
-        rating: 3,
-        feedback_text: "The bus was on time but the AC wasn't working properly.",
-        submitted_at: "2025-04-14 08:32",
-        status: "Pending"
-      },
-      {
-        trip_id: "T-2501",
-        vehicle: "Train X2",
-        rating: 5,
-        feedback_text: "Great service, the driver was very helpful with my luggage.",
-        submitted_at: "2025-04-14 07:15",
-        status: "Resolved"
-      },
-      {
-        trip_id: "T-2498",
-        vehicle: "Bus B3",
-        rating: 2,
-        feedback_text: "The bus was 10 minutes late. Please improve the timing.",
-        submitted_at: "2025-04-13 18:45",
-        status: "Pending"
-      },
-      {
-        trip_id: "T-2495",
-        vehicle: "Shuttle C7",
-        rating: 4,
-        feedback_text: "Clean vehicle and smooth ride. Would be perfect if WiFi was working.",
-        submitted_at: "2025-04-13 14:20",
-        status: "Resolved"
-      }
-    ];
-
-    const tbody = document.getElementById("feedbackTable");
-
-    // Function to generate star rating HTML
-    function generateStars(rating) {
-      let stars = '';
-      for (let i = 1; i <= 5; i++) {
-        if (i <= rating) {
-          stars += '<i class="fas fa-star"></i>';
-        } else {
-          stars += '<i class="far fa-star"></i>';
-        }
-      }
-      return stars;
+    // Function to format date from database timestamp
+    function formatDate(timestamp) {
+      if (!timestamp) return 'Unknown';
+      const date = new Date(timestamp);
+      return date.toLocaleString();
     }
 
-    // Render feedback data
-    feedbackData.forEach(entry => {
-      const row = document.createElement("tr");
-      const statusClass = entry.status === "Pending" ? "badge-pending" : "badge-resolved";
-      
-      row.innerHTML = `
-        <td>${entry.trip_id}</td>
-        <td>${entry.vehicle}</td>
-        <td><div class="rating">${generateStars(entry.rating)}</div></td>
-        <td>${entry.feedback_text}</td>
-        <td>${entry.submitted_at}</td>
-        <td><span class="badge rounded-pill ${statusClass} px-3 py-2">${entry.status}</span></td>
-        <td>
-          <button class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></button>
-          ${entry.status === "Pending" ? '<button class="btn btn-sm btn-outline-success"><i class="fas fa-check"></i></button>' : ''}
-        </td>
-      `;
-      
-      tbody.appendChild(row);
-    });
-
-    // You would replace this with your actual API call:
-    /*
-    fetch("../../backend/api/getFeedback.php")
-      .then(res => res.json())
-      .then(data => {
-        const tbody = document.getElementById("feedbackTable");
-        
-        if (!data.length) {
-          tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4">No feedback entries found.</td></tr>';
-        } else {
+    // Fetch and display feedback data
+    document.addEventListener('DOMContentLoaded', function() {
+      fetch("../backend/api/getFeedback.php")
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`HTTP error! Status: ${res.status}`);
+          }
+          return res.json();
+        })
+        .then(data => {
+          const tbody = document.getElementById("feedbackTable");
+          tbody.innerHTML = ''; // Clear loading message
+          
+          if (!data || !data.length) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4">No feedback entries found.</td></tr>';
+            return;
+          }
+          
+          // Update statistics
+          document.getElementById('totalFeedback').textContent = data.length;
+          
+          // Find unique trip IDs
+          const uniqueTripIds = new Set(data.map(item => item.trip_id));
+          document.getElementById('uniqueTrips').textContent = uniqueTripIds.size;
+          
+          // Find latest feedback date
+          let latestDate = new Date(0);
+          data.forEach(entry => {
+            if (entry.timestamp) {
+              const entryDate = new Date(entry.timestamp);
+              if (entryDate > latestDate) {
+                latestDate = entryDate;
+              }
+            }
+          });
+          
+          document.getElementById('latestDate').textContent = 
+            latestDate.getTime() === 0 ? 'None' : latestDate.toLocaleDateString();
+          
+          // Display feedback data
           data.forEach(entry => {
             const row = document.createElement("tr");
-            const statusClass = entry.status === "Pending" ? "badge-pending" : "badge-resolved";
             
             row.innerHTML = `
               <td>${entry.trip_id}</td>
-              <td>${entry.vehicle || 'Unknown'}</td>
-              <td><div class="rating">${generateStars(entry.rating || 0)}</div></td>
-              <td>${entry.feedback_text}</td>
-              <td>${entry.submitted_at}</td>
-              <td><span class="badge rounded-pill ${statusClass} px-3 py-2">${entry.status || 'Pending'}</span></td>
-              <td>
-                <button class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></button>
-                ${entry.status !== "Resolved" ? '<button class="btn btn-sm btn-outline-success"><i class="fas fa-check"></i></button>' : ''}
-              </td>
+              <td>${entry.message}</td>
+              <td>${formatDate(entry.timestamp)}</td>
             `;
             
             tbody.appendChild(row);
           });
-        }
-      })
-      .catch(err => {
-        console.error("Error loading feedback:", err);
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Error loading feedback data. Please try again later.</td></tr>';
-      });
-    */
+          
+          // Implement search functionality
+          const searchInput = document.getElementById('searchInput');
+          searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#feedbackTable tr');
+            
+            rows.forEach(row => {
+              const text = row.textContent.toLowerCase();
+              row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+          });
+        })
+        .catch(err => {
+          console.error("Error loading feedback:", err);
+          const tbody = document.getElementById("feedbackTable");
+          tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-danger">Error loading feedback data. Please try again later.</td></tr>';
+        });
+    });
   </script>
 </body>
 </html>
