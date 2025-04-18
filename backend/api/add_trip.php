@@ -4,7 +4,10 @@ $conn = new mysqli("localhost", "root", "", "realtime_tracker");
 // Step 1: Check if form data is sent via POST method
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Step 2: Get form inputs
-    if (isset($_POST['vehicle_number']) && isset($_POST['type']) && isset($_POST['start_time']) && isset($_POST['end_time']) && isset($_POST['route_points'])) {
+    if (isset($_POST['vehicle_number']) && isset($_POST['type']) &&
+        isset($_POST['start_time']) && isset($_POST['end_time']) &&
+        isset($_POST['route_points'])) {
+
         $vehicle_number = $_POST['vehicle_number'];
         $type = $_POST['type'];
         $start_time = $_POST['start_time'];
@@ -20,12 +23,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $vehicle_id = $conn->insert_id;
         }
 
-        // Step 4: Insert trip
-        $conn->query("INSERT INTO trip (vehicle_id, start_time, end_time)
-                      VALUES ($vehicle_id, '$start_time', '$end_time')");
+        // 🔥 Step 4: Insert route with source and destination coordinates
+        $first_point = explode(",", trim($route_points[0]));
+        $last_point = explode(",", trim(end($route_points)));
+
+        $source_lat = trim($first_point[0]);
+        $source_lng = trim($first_point[1]);
+        $destination_lat = trim($last_point[0]);
+        $destination_lng = trim($last_point[1]);
+
+        $conn->query("INSERT INTO route (source_lat, source_lng, destination_lat, destination_lng) 
+                      VALUES ('$source_lat', '$source_lng', '$destination_lat', '$destination_lng')");
+        $route_id = $conn->insert_id;
+
+        // ✅ Step 5: Insert trip with route_id
+        $conn->query("INSERT INTO trip (vehicle_id, route_id, start_time, end_time)
+                      VALUES ($vehicle_id, $route_id, '$start_time', '$end_time')");
         $trip_id = $conn->insert_id;
 
-        // Step 5: Insert route points
+        // ✅ Step 6: Insert route points
         $order = 1;
         foreach ($route_points as $line) {
             $coords = explode(",", trim($line));
@@ -38,15 +54,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Step 6: Return success message
+        // ✅ Step 7: Return success message
         echo "✅ Trip and route added successfully. <a href='../../frontend/index.html'>Go to Map</a>";
     } else {
-        // Handle missing form data
         echo "❌ Error: Missing required fields. Please fill all fields.";
     }
 } else {
-    // If not a POST request, show an error
     echo "❌ Error: Form not submitted correctly.";
 }
-
 ?>

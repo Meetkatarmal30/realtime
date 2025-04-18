@@ -1,78 +1,66 @@
 <?php
-// Set timezone
+header('Content-Type: application/json');
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 date_default_timezone_set("Asia/Kolkata");
 
-// Connect to the database
 $conn = new mysqli("localhost", "root", "", "realtime_tracker");
 
 if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-// Get the trip_id from the URL query string
-$trip_id = isset($_GET['trip_id']) ? (int) $_GET['trip_id'] : 0;
-
-// If no trip_id is provided, return an empty response
-if ($trip_id <= 0) {
-    echo json_encode([]);
+    echo json_encode(["error" => "DB connection failed"]);
     exit;
 }
 
-// Debugging: Log the trip_id to check its value
-error_log("Requested trip_id: " . $trip_id);
+$trip_id = isset($_GET['trip_id']) ? intval($_GET['trip_id']) : 0;
+if ($trip_id <= 0) {
+    echo json_encode(["error" => "Invalid trip ID"]);
+    exit;
+}
 
-// Query to get the trip details by trip_id
+// Fetch trip + vehicle + route info
 $sql = "
-    SELECT t.trip_id, t.route_name, t.vehicle_id, v.vehicle_number, v.type,
-           t.start_time, t.end_time,
-           (SELECT latitude FROM location l WHERE l.trip_id = t.trip_id ORDER BY l.timestamp DESC LIMIT 1) AS latitude,
-           (SELECT longitude FROM location l WHERE l.trip_id = t.trip_id ORDER BY l.timestamp DESC LIMIT 1) AS longitude
-    FROM trip t
-    JOIN vehicle v ON t.vehicle_id = v.vehicle_id
-    WHERE t.trip_id = $trip_id
+SELECT t.trip_id, t.start_time, t.end_time, v.vehicle_number, v.type,
+       r.source_lat, r.source_lng, r.destination_lat, r.destination_lng,
+       (SELECT latitude FROM location l WHERE l.trip_id = t.trip_id ORDER BY l.timestamp DESC LIMIT 1) AS latitude,
+       (SELECT longitude FROM location l WHERE l.trip_id = t.trip_id ORDER BY l.timestamp DESC LIMIT 1) AS longitude
+FROM trip t
+JOIN vehicle v ON t.vehicle_id = v.vehicle_id
+JOIN route r ON t.route_id = r.route_id
+WHERE t.trip_id = ?
 ";
 
-// Execute the query
-$res = $conn->query($sql);
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $trip_id);
+$stmt->execute();
+$result = $stmt->get_result();
 
-// Debugging: Check if the query was successful
-if (!$res) {
-    error_log("Query failed: " . $conn->error);
-    die("Query failed: " . $conn->error);
+if ($result->num_rows === 0) {
+    echo json_encode(["error" => "Trip not found"]);
+    exit;
 }
 
-$trip = null;
+$trip = $result->fetch_assoc();
 
-if ($res && $res->num_rows > 0) {
-    $trip = $res->fetch_assoc();
+// Add the route name using latitude and longitude
+$trip['route_name'] = $trip['source_lat'] . ", " . $trip['source_lng'] . " to " . $trip['destination_lat'] . ", " . $trip['destination_lng'];
 
-    // Debugging: Log the fetched trip data
-    error_log("Fetched trip: " . print_r($trip, true));
+// Fetch route points
+$route_sql = "
+SELECT latitude, longitude FROM route_point
+WHERE trip_id = ? ORDER BY point_order ASC
+";
 
-    // Fetch the route points
-    $routeQuery = "SELECT latitude, longitude FROM route_point WHERE trip_id = $trip_id ORDER BY id ASC";
-    $routeRes = $conn->query($routeQuery);
+$route_stmt = $conn->prepare($route_sql);
+$route_stmt->bind_param("i", $trip_id);
+$route_stmt->execute();
+$route_result = $route_stmt->get_result();
 
-    if (!$routeRes) {
-        error_log("Route Query failed: " . $conn->error);
-        die("Route Query failed: " . $conn->error);
-    }
-
-    $route = [];
-    if ($routeRes && $routeRes->num_rows > 0) {
-        while ($point = $routeRes->fetch_assoc()) {
-            $route[] = [$point['latitude'], $point['longitude']];
-        }
-    }
-
-    // Add route to the trip
-    $trip['route'] = $route;
+$route = [];
+while ($row = $route_result->fetch_assoc()) {
+    $route[] = [floatval($row['latitude']), floatval($row['longitude'])];
 }
 
-// Debugging: Log final trip data before returning
-error_log("Final trip data: " . print_r($trip, true));
+$trip['route'] = $route;
 
-// Return the trip data or an empty array if no trip found
-header('Content-Type: application/json');
-echo json_encode($trip ? $trip : []);
+echo json_encode($trip);
 ?>

@@ -77,7 +77,7 @@ try {
         }
         
         // Get route points separately
-        $routeSql = "SELECT latitude, longitude FROM route_point WHERE trip_id = ? ORDER BY id ASC";
+        $routeSql = "SELECT latitude, longitude FROM route_point WHERE trip_id = ? ORDER BY trip_id ASC";
         $routeStmt = $conn->prepare($routeSql);
         if ($routeStmt) {
             $routeStmt->bind_param("i", $trip_id);
