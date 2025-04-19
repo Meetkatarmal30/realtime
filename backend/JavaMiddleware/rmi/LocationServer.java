@@ -14,14 +14,14 @@ public class LocationServer extends UnicastRemoteObject implements LocationInter
     }
 
     @Override
-    public String sendLocation(double latitude, double longitude) throws RemoteException {
+    public String sendLocation(int tripId, double latitude, double longitude) throws RemoteException {
         try {
             URL url = new URL("http://localhost/RealTimeTrackerProject/backend/api/rmiInsert.php");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setDoOutput(true);
 
-            String data = "lat=" + latitude + "&lng=" + longitude;
+            String data = "trip_id=" + tripId + "&lat=" + latitude + "&lng=" + longitude;
 
             OutputStream os = conn.getOutputStream();
             os.write(data.getBytes());
@@ -29,7 +29,7 @@ public class LocationServer extends UnicastRemoteObject implements LocationInter
             os.close();
 
             int responseCode = conn.getResponseCode();
-            return "Location sent. Response code: " + responseCode;
+            return "Location sent for Trip " + tripId + ". Response code: " + responseCode;
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -39,9 +39,6 @@ public class LocationServer extends UnicastRemoteObject implements LocationInter
 
     public static void main(String[] args) {
         try {
-            // Use this ONLY if rmiregistry is not running separately
-            // LocateRegistry.createRegistry(1099);
-
             Naming.rebind("LocationService", new LocationServer());
             System.out.println("RMI Server is running...");
         } catch (Exception e) {

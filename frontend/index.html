@@ -405,7 +405,8 @@
       fetchAllActiveTrips();
       
       // Set up periodic refresh every 30 seconds
-      setInterval(fetchAllActiveTrips, 30000);
+      setInterval(fetchAllActiveTrips, 5000); // 5 seconds
+
     });
 
     const statusBox = document.getElementById("statusBox");
@@ -416,12 +417,22 @@
       try {
         statusBox.innerHTML = '<i class="fas fa-sync fa-spin"></i> <span id="statusText">Loading active trips...</span>';
         
-        const response = await fetch('getAllActiveTrips.php');
+        const response = await fetch('../backend/api/getAllActiveTrips.php');
         if (!response.ok) {
           throw new Error('Failed to fetch trips');
         }
         
-        const trips = await response.json();
+        let trips;
+        const responseClone = response.clone();
+        try {
+          trips = await response.json();
+        } catch (e) {
+          const text = await responseClone.text();
+          console.error('Failed to parse JSON:', text);
+          statusBox.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error parsing server response.';
+          activeTripsContainer.innerHTML = `<pre style="color:red; white-space: pre-wrap;">${text}</pre>`;
+          return;
+        }
         
         // Check if response contains error
         if (trips.error) {
@@ -439,348 +450,306 @@
         
         // Process each trip
         for(const trip of trips) {
+          // Update marker position if already exists
+          if (activeMarkers[trip.trip_id]) {
+              let lat = parseFloat(trip.latitude);
+              let lng = parseFloat(trip.longitude);
+              if (isNaN(lat) || isNaN(lng)) {
+                // Fallback to first route point if lat/lng missing
+                if (trip.route && trip.route.length > 0) {
+                  lat = trip.route[0][0];
+                  lng = trip.route[0][1];
+                }
+              }
+              if (!isNaN(lat) && !isNaN(lng)) {
+                const updatedLatLng = [lat, lng];
+                activeMarkers[trip.trip_id].setLatLng(updatedLatLng);
+              } else {
+                console.warn(`Invalid lat/lng for trip ${trip.trip_id}:`, trip.latitude, trip.longitude);
+              }
+          }
+
           createTripCard(trip);
           await displayTripOnMap(trip);
+          
         }
         
+        statusBox.innerHTML = '<i class="fas fa-check-circle"></i> Showing ' + trips.length + ' active trips';
         statusBox.innerHTML = '<i class="fas fa-check-circle"></i> Showing ' + trips.length + ' active trips';
         
       } catch (err) {
         console.error('Error fetching trips:', err);
         statusBox.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + (err.message || 'Error fetching trips');
         activeTripsContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: #666;">' + (err.message || 'Error loading trip data') + '</p>';
+        statusBox.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + (err.message || 'Error fetching trips');
+        activeTripsContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: #666;">' + (err.message || 'Error loading trip data') + '</p>';
       }
     }
+    
     
     async function displayTripOnMap(trip) {
-      try {
-        // First try to get detailed trip info with route
-        let detailedTrip = null;
-        try {
-          const tripResponse = await fetch(`getActiveTrip.php?trip_id=${trip.trip_id}`);
-          detailedTrip = await tripResponse.json();
-          
-          if (detailedTrip.error) {
-            console.warn(`Error fetching detailed trip ${trip.trip_id}:`, detailedTrip.error);
-          }
-        } catch (err) {
-          console.warn(`Couldn't fetch detailed trip ${trip.trip_id}:`, err.message);
-        }
-        
-        // If we got detailed info, use that
-        if (detailedTrip && !detailedTrip.error) {
-          trip = {...trip, ...detailedTrip};
-        }
-        
-        // If no route points, create a simple route
-        if (!trip.route || trip.route.length === 0) {
-          const startPoint = [trip.latitude || 12.961, trip.longitude || 77.641];
-          const endPoint = [
-            startPoint[0] + (Math.random() * 0.02 - 0.01),
-            startPoint[1] + (Math.random() * 0.02 - 0.01)
-          ];
-          
-          trip.route = [
-            startPoint,
-            [
-              startPoint[0] + (endPoint[0] - startPoint[0]) * 0.3,
-              startPoint[1] + (endPoint[1] - startPoint[1]) * 0.3
-            ],
-            [
-              startPoint[0] + (endPoint[0] - startPoint[0]) * 0.7,
-              startPoint[1] + (endPoint[1] - startPoint[1]) * 0.7
-            ],
-            endPoint
-          ];
-        }
-        
-        // Remove any existing polyline for this trip
-        if (activePolylines[trip.trip_id]) {
-          map.removeLayer(activePolylines[trip.trip_id]);
-        }
-        
-        // Create polyline for the route
-        const polyline = L.polyline(trip.route, {
-          color: '#2196F3',
-          weight: 5,
-          opacity: 0.7,
-          lineJoin: 'round'
-        }).addTo(map);
-        
-        // Store polyline for this trip
-        activePolylines[trip.trip_id] = polyline;
-
-        // Set view to fit all routes if this is the first trip
-        if (Object.keys(activePolylines).length === 1) {
-          map.fitBounds(polyline.getBounds());
-        }
-
-        // Create vehicle icon based on type (bus or train)
-        const iconUrl = trip.type === 'train' 
-          ? 'https://cdn-icons-png.flaticon.com/512/3066/3066953.png'
-          : 'https://cdn-icons-png.flaticon.com/512/201/201818.png';
-          
-        const icon = L.icon({
-          iconUrl: iconUrl,
-          iconSize: [36, 36],
-          iconAnchor: [18, 36],
-          popupAnchor: [0, -36]
-        });
-
-        // Remove any existing marker for this trip
-        if (activeMarkers[trip.trip_id]) {
-          map.removeLayer(activeMarkers[trip.trip_id]);
-        }
-        
-        // Use current position if available, otherwise first route point
-        const currentPosition = trip.latitude && trip.longitude 
-          ? [parseFloat(trip.latitude), parseFloat(trip.longitude)]
-          : trip.route[0];
-        
-        // Create marker at current position
-        const marker = L.marker(currentPosition, { icon }).addTo(map)
-          .bindPopup(`
-            <b>${trip.route_name}</b><br>
-            ${trip.vehicle_number}<br>
-            <span style="color:#1976D2">
-              <i class="fas fa-info-circle"></i> ${trip.type.charAt(0).toUpperCase() + trip.type.slice(1)}
-            </span>
-          `);
-
-        // Store marker for this trip
-        activeMarkers[trip.trip_id] = marker;
-
-        // Animate the marker along the route if trip is in progress
-        const now = new Date();
-        const startTime = new Date(trip.start_time);
-        const endTime = new Date(trip.end_time);
-        
-        if (now > startTime && now < endTime) {
-          const totalDuration = endTime - startTime;
-          const elapsed = now - startTime;
-          const progress = elapsed / totalDuration;
-          
-          // Find closest point on route to current position
-          let closestIndex = 0;
-          let minDistance = Infinity;
-          
-          trip.route.forEach((point, index) => {
-            const distance = Math.sqrt(
-              Math.pow(point[0] - currentPosition[0], 2) + 
-              Math.pow(point[1] - currentPosition[1], 2)
-            );
-            
-            if (distance < minDistance) {
-              minDistance = distance;
-              closestIndex = index;
-            }
-          });
-          
-          // Animate from closest point to end
-          const remainingPoints = trip.route.slice(closestIndex);
-          const remainingTime = endTime - now;
-          
-          if (remainingPoints.length > 1) {
-            animateMarker(marker, remainingPoints, remainingTime, trip.trip_id);
-          }
-        }
-        
-      } catch (err) {
-        console.error(`Error displaying trip ${trip.trip_id}:`, err);
+  try {
+    // First try to get detailed trip info with route
+    let detailedTrip = null;
+    try {
+      const tripResponse = await fetch(`../backend/api/getActiveTrip.php?trip_id=${trip.trip_id}`);
+      detailedTrip = await tripResponse.json();
+      
+      if (detailedTrip.error) {
+        console.warn(`Error fetching detailed trip ${trip.trip_id}:`, detailedTrip.error);
       }
+    } catch (err) {
+      console.warn(`Couldn't fetch detailed trip ${trip.trip_id}:`, err.message);
     }
     
-    function createTripCard(trip) {
-      // Check if card already exists, if so, update it
-      const existingCard = document.querySelector(`.trip-card[data-trip-id="${trip.trip_id}"]`);
-      if (existingCard) {
-        existingCard.remove();
-      }
-      
-      const tripCard = document.createElement('div');
-      tripCard.className = 'trip-card';
-      tripCard.setAttribute('data-trip-id', trip.trip_id);
-      
-      // Calculate remaining time
-      const now = new Date();
-      const endTime = new Date(trip.end_time);
-      const remainingMinutes = Math.max(0, Math.floor((endTime - now) / 60000));
-      
-      // Determine current status
-      let status = 'active';
-      let statusDisplay = 'Active';
-      
-      if (now > endTime) {
-        status = 'complete';
-        statusDisplay = 'Completed';
-      } else if (now < new Date(trip.start_time)) {
-        status = 'scheduled';
-        statusDisplay = 'Scheduled';
-      }
-      
-      // Determine destination and current stop (placeholder)
-      const destination = trip.route_name.split(' to ')[1] || 'End Point';
-      const currentStop = 'En Route';
-      
-      tripCard.innerHTML = `
-        <div class="trip-header">
-          <div class="route-name">${trip.route_name}</div>
-          <div class="vehicle-number">${trip.vehicle_number}</div>
-        </div>
-        <div class="trip-details">
-          <div class="detail-row">
-            <i class="fas fa-map-marker-alt"></i>
-            <span>Current: ${currentStop}</span>
-          </div>
-          <div class="detail-row">
-            <i class="fas fa-flag-checkered"></i>
-            <span>Destination: ${destination}</span>
-          </div>
-          <div class="detail-row">
-            <i class="fas fa-clock"></i>
-            <span>ETA: ${remainingMinutes} minutes</span>
-          </div>
-          <div class="status-badge">
-            <i class="fas fa-circle"></i> ${statusDisplay}
-          </div>
-        </div>
-      `;
-      
-      // Add click event to focus on this trip on the map
-      tripCard.addEventListener('click', () => {
-        focusOnTrip(trip.trip_id);
-      });
-      
-      activeTripsContainer.appendChild(tripCard);
+    // If we got detailed info, use that
+    if (detailedTrip && !detailedTrip.error) {
+      trip = {...trip, ...detailedTrip};
     }
     
-    function focusOnTrip(tripId) {
-      const marker = activeMarkers[tripId];
-      if (marker) {
-        map.setView(marker.getLatLng(), 16);
-        marker.openPopup();
-        
-        // Highlight the selected card
-        document.querySelectorAll('.trip-card').forEach(card => {
-          card.style.borderLeft = '5px solid var(--primary)';
-          card.style.transform = 'none';
-        });
-        
-        const selectedCard = document.querySelector(`.trip-card[data-trip-id="${tripId}"]`);
-        if (selectedCard) {
-          selectedCard.style.borderLeft = '5px solid #4CAF50';
-          selectedCard.style.transform = 'translateY(-3px)';
-        }
-      }
+    if (!trip.route || !Array.isArray(trip.route) || trip.route.length === 0) {
+      console.warn(`Trip ${trip.trip_id} has no route points. Skipping display.`);
+      return;
+    } 
+
+    // Remove any existing polyline for this trip
+    if (activePolylines[trip.trip_id]) {
+      map.removeLayer(activePolylines[trip.trip_id]);
     }
     
-    function animateMarker(marker, points, duration, tripId) {
-      // Cancel any existing animation for this trip
-      if (activeAnimations[tripId]) {
-        clearInterval(activeAnimations[tripId]);
-      }
+    // Create polyline for the route
+    const polyline = L.polyline(trip.route, {
+      color: '#2196F3',
+      weight: 5,
+      opacity: 0.7,
+      lineJoin: 'round'
+    }).addTo(map);
+    
+    // Store polyline for this trip
+    activePolylines[trip.trip_id] = polyline;
+
+    // Set view to fit all routes if this is the first trip
+    if (Object.keys(activePolylines).length === 1) {
+      map.fitBounds(polyline.getBounds());
+    }
+
+    // Create vehicle icon based on type (bus or train)
+    const iconUrl = trip.type === 'train' 
+      ? 'https://cdn-icons-png.flaticon.com/512/3066/3066953.png'
+      : 'https://cdn-icons-png.flaticon.com/512/201/201818.png';
       
-      const startTime = Date.now();
-      const endTime = startTime + duration;
-      let lastPointIndex = 0;
+    const icon = L.icon({
+      iconUrl: iconUrl,
+      iconSize: [36, 36],
+      iconAnchor: [18, 36],
+      popupAnchor: [0, -36]
+    });
+
+    // Remove any existing marker for this trip
+    if (activeMarkers[trip.trip_id]) {
+      map.removeLayer(activeMarkers[trip.trip_id]);
+    }
+    
+    // Use current position if available, otherwise first route point
+    const lat = parseFloat(trip.latitude);
+    const lng = parseFloat(trip.longitude);
+    const currentPosition = (!isNaN(lat) && !isNaN(lng)) 
+      ? [lat, lng]
+      : trip.route[0];
+    
+    // Create marker at current position
+    const marker = L.marker(currentPosition, { icon }).addTo(map)
+      .bindPopup(`
+        <b>${trip.vehicle_number}</b><br>
+        Lat: ${currentPosition[0].toFixed(5)}<br>
+        Lng: ${currentPosition[1].toFixed(5)}<br>
+        <span style="color:#1976D2">
+          <i class="fas fa-info-circle"></i> ${trip.type.charAt(0).toUpperCase() + trip.type.slice(1)}
+        </span>
+      `);
+
+    // Store marker for this trip
+    activeMarkers[trip.trip_id] = marker;
+
+    // Animate the marker along the route if trip is in progress
+    const now = new Date();
+    const startTime = new Date(trip.start_time);
+    const endTime = new Date(trip.end_time);
+    
+    if (now > startTime && now < endTime) {
+      const totalDuration = endTime - startTime;
+      const elapsed = now - startTime;
+      const progress = elapsed / totalDuration;
       
-      const interval = setInterval(() => {
-        const now = Date.now();
-        
-        if (now >= endTime) {
-          // Animation complete
-          marker.setLatLng(points[points.length - 1]);
-          clearInterval(interval);
-          delete activeAnimations[tripId];
-          
-          // Update trip card status
-          updateTripCardStatus(tripId, 'complete');
-          return;
-        }
-        
-        const elapsedMs = now - startTime;
-        const progressPercent = elapsedMs / duration;
-        const pointIndex = Math.min(
-          points.length - 1, 
-          Math.floor(progressPercent * (points.length - 1))
+      // Find closest point on route to current position
+      let closestIndex = 0;
+      let minDistance = Infinity;
+      
+      trip.route.forEach((point, index) => {
+        const distance = Math.sqrt(
+          Math.pow(point[0] - currentPosition[0], 2) + 
+          Math.pow(point[1] - currentPosition[1], 2)
         );
         
-        // Only update if position changed
-        if (pointIndex > lastPointIndex) {
-          marker.setLatLng(points[pointIndex]);
-          lastPointIndex = pointIndex;
-          
-          // Update trip card ETA
-          const remainingMs = endTime - now;
-          const remainingMinutes = Math.max(0, Math.ceil(remainingMs / 60000));
-          
-          const tripCard = document.querySelector(`.trip-card[data-trip-id="${tripId}"]`);
-          if (tripCard) {
-            const etaElement = tripCard.querySelector('.detail-row:nth-child(3) span');
-            if (etaElement) {
-              etaElement.textContent = `ETA: ${remainingMinutes} minutes`;
-            }
-          }
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestIndex = index;
         }
-      }, 1000); // Update every second
+      });
       
-      // Store animation interval for possible cancellation
-      activeAnimations[tripId] = interval;
+      // Animate from closest point to end
+      const remainingPoints = trip.route.slice(closestIndex);
+      const remainingTime = endTime - now;
+      
+      if (remainingPoints.length > 1) {
+        animateMarker(marker, remainingPoints, remainingTime, trip.trip_id);
+      }
     }
 
-    function refreshMap() {
-      // Clear existing markers and animations
-      Object.values(activeMarkers).forEach(marker => {
-        if (map) map.removeLayer(marker);
-      });
+    console.log("Trip Route:", trip.trip_id, trip.route);
+
+  } catch (err) {
+    console.error(`Error displaying trip ${trip.trip_id}:`, err);
+  }
+}
+
+function createTripCard(trip) {
+  // Check if card already exists, if so, update it
+  const existingCard = document.querySelector(`.trip-card[data-trip-id="${trip.trip_id}"]`);
+  if (existingCard) {
+    existingCard.remove();
+  }
+
+  const tripCard = document.createElement('div');
+  tripCard.className = 'trip-card';
+  tripCard.setAttribute('data-trip-id', trip.trip_id);
+
+  // Calculate remaining time
+  const now = new Date();
+  const startTime = new Date(trip.start_time);
+  const endTime = new Date(trip.end_time);
+  const remainingMinutes = Math.max(0, Math.floor((endTime - now) / 60000));
+
+  // Determine current status
+  let status = 'Upcoming';
+  if (now >= startTime && now < endTime) status = 'In Progress';
+  else if (now >= endTime) status = 'Completed';
+
+  // Card inner HTML
+  tripCard.innerHTML = `
+    <div class="trip-details">
+      <p><strong>Vehicle:</strong> ${trip.vehicle_number || 'N/A'}</p>
+      <p><strong>Type:</strong> ${trip.type.charAt(0).toUpperCase() + trip.type.slice(1)}</p>
+      <p><strong>Start Time:</strong> ${startTime.toLocaleTimeString()}</p>
+      <p><strong>End Time:</strong> ${endTime.toLocaleTimeString()}</p>
+      <p><strong>Status:</strong> <span class="${status.toLowerCase().replace(' ', '-')}">${status}</span></p>
+      ${status === 'In Progress' ? `<p><strong>ETA:</strong> ${remainingMinutes} min</p>` : ''}
+    </div>
+  `;
+
+  activeTripsContainer.appendChild(tripCard);
+}
+
+function focusOnTrip(tripId) {
+  const marker = activeMarkers[tripId];
+  if (marker) {
+    map.setView(marker.getLatLng(), 16);
+    marker.openPopup();
+    
+    // Highlight the selected card
+    document.querySelectorAll('.trip-card').forEach(card => {
+      card.style.borderLeft = '5px solid var(--primary)';
+      card.style.transform = 'none';
+    });
+    
+    const selectedCard = document.querySelector(`.trip-card[data-trip-id="${tripId}"]`);
+    if (selectedCard) {
+      selectedCard.style.borderLeft = '5px solid #4CAF50';
+      selectedCard.style.transform = 'translateY(-3px)';
+    }
+  }
+}
+
+function animateMarker(marker, points, duration, tripId) {
+  // Cancel any existing animation for this trip
+  if (activeAnimations[tripId]) {
+    clearInterval(activeAnimations[tripId]);
+  }
+  
+  const startTime = Date.now();
+  const endTime = startTime + duration;
+  let lastPointIndex = 0;
+  
+  const interval = setInterval(() => {
+    const now = Date.now();
+    
+    if (now >= endTime) {
+      // Animation complete
+      marker.setLatLng(points[points.length - 1]);
+      clearInterval(interval);
+      delete activeAnimations[tripId];
       
-      Object.values(activeAnimations).forEach(interval => {
-        clearInterval(interval);
-      });
-      
-      // Clear collections
-      Object.keys(activeMarkers).forEach(key => delete activeMarkers[key]);
-      Object.keys(activeAnimations).forEach(key => delete activeAnimations[key]);
-      
-      // Remove all polylines
-      Object.values(activePolylines).forEach(polyline => {
-        if (map) map.removeLayer(polyline);
-      });
-      Object.keys(activePolylines).forEach(key => delete activePolylines[key]);
-      
-      // Fetch fresh data
-      fetchAllActiveTrips();
+      // Update trip card status
+      updateTripCardStatus(tripId, 'complete');
+      return;
     }
     
-    function updateTripCardStatus(tripId, status) {
+    const elapsedMs = now - startTime;
+    const progressPercent = elapsedMs / duration;
+    const pointIndex = Math.min(
+      points.length - 1, 
+      Math.floor(progressPercent * (points.length - 1))
+    );
+    
+    // Only update if position changed
+    if (pointIndex > lastPointIndex) {
+      marker.setLatLng(points[pointIndex]);
+      lastPointIndex = pointIndex;
+      
+      // Update trip card ETA
+      const remainingMs = endTime - now;
+      const remainingMinutes = Math.max(0, Math.ceil(remainingMs / 60000));
+      
       const tripCard = document.querySelector(`.trip-card[data-trip-id="${tripId}"]`);
-      if (!tripCard) return;
-      
-      const statusBadge = tripCard.querySelector('.status-badge');
-      if (!statusBadge) return;
-      
-      let statusDisplay = 'Active';
-      let badgeStyle = { bg: '#e6f7e6', color: '#388e3c' };
-      
-      switch(status) {
-        case 'complete':
-          statusDisplay = 'Completed';
-          badgeStyle = { bg: '#e3f2fd', color: '#1976d2' };
-          break;
-        case 'scheduled':
-          statusDisplay = 'Scheduled';
-          badgeStyle = { bg: '#fff8e1', color: '#ff8f00' };
-          break;
-        case 'delayed':
-          statusDisplay = 'Delayed';
-          badgeStyle = { bg: '#ffebee', color: '#c62828' };
-          break;
+      if (tripCard) {
+        const etaElement = tripCard.querySelector('.detail-row:nth-child(3) span');
+        if (etaElement) {
+          etaElement.textContent = `ETA: ${remainingMinutes} minutes`;
+        }
       }
-      
-      statusBadge.innerHTML = `<i class="fas fa-circle"></i> ${statusDisplay}`;
-      statusBadge.style.background = badgeStyle.bg;
-      statusBadge.style.color = badgeStyle.color;
     }
+  }, 1000); // Update every second
+  
+  // Store animation interval for possible cancellation
+  activeAnimations[tripId] = interval;
+}
+
+function updateTripCardStatus(tripId, status) {
+  const tripCard = document.querySelector(`.trip-card[data-trip-id="${tripId}"]`);
+  if (!tripCard) return;
+  
+  const statusBadge = tripCard.querySelector('.status-badge');
+  if (!statusBadge) return;
+  
+  let statusDisplay = 'Active';
+  let badgeStyle = { bg: '#e6f7e6', color: '#388e3c' };
+  
+  switch(status) {
+    case 'complete':
+      statusDisplay = 'Completed';
+      badgeStyle = { bg: '#e3f2fd', color: '#1976d2' };
+      break;
+    case 'scheduled':
+      statusDisplay = 'Scheduled';
+      badgeStyle = { bg: '#ffebee', color: '#d32f2f' };
+      break;
+  }
+  
+  statusBadge.textContent = statusDisplay;
+  statusBadge.style.backgroundColor = badgeStyle.bg;
+  statusBadge.style.color = badgeStyle.color;
+}
+
   </script>
 </body>
 </html>

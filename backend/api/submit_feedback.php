@@ -16,16 +16,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   $message = isset($_POST["message"]) ? trim($_POST["message"]) : '';
 
   if ($trip_id > 0 && !empty($message)) {
-    $stmt = $conn->prepare("INSERT INTO feedback (trip_id, message, timestamp) VALUES (?, ?, NOW())");
-    $stmt->bind_param("is", $trip_id, $message);
+    // Check if trip_id exists in trip table
+    $checkTripStmt = $conn->prepare("SELECT trip_id FROM trip WHERE trip_id = ?");
+    $checkTripStmt->bind_param("i", $trip_id);
+    $checkTripStmt->execute();
+    $checkTripResult = $checkTripStmt->get_result();
 
-    if ($stmt->execute()) {
-      echo "✅ Feedback submitted successfully! <br><a href='../../frontend/index.html'>Back to Home</a>";
+    if ($checkTripResult && $checkTripResult->num_rows > 0) {
+      $stmt = $conn->prepare("INSERT INTO feedback (trip_id, message, timestamp) VALUES (?, ?, NOW())");
+      $stmt->bind_param("is", $trip_id, $message);
+
+      if ($stmt->execute()) {
+        echo "✅ Feedback submitted successfully! <br><a href='../../frontend/index.html'>Back to Home</a>";
+      } else {
+        echo "❌ Error submitting feedback: " . $stmt->error;
+      }
+
+      $stmt->close();
     } else {
-      echo "❌ Error submitting feedback: " . $stmt->error;
+      echo "❌ Invalid trip ID. Feedback not submitted.";
     }
 
-    $stmt->close();
+    $checkTripStmt->close();
   } else {
     echo "❌ Please fill in all required fields.";
   }
