@@ -42,7 +42,7 @@ public class LocationClient {
                     String response = server.sendLocation(tripId, lat, lng);
                     System.out.println("➡️ Sent: Trip " + tripId + " → " + lat + ", " + lng + " → " + response);
 
-                    Thread.sleep(3000); // Simulate 3s movement delay
+                    Thread.sleep(5000); // Simulate 3s movement delay
                 }
 
                 System.out.println("✅ Finished Trip " + tripId + " simulation.\n");
